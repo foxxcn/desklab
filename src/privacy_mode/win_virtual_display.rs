@@ -1,7 +1,10 @@
 use super::{PrivacyMode, PrivacyModeState, INVALID_PRIVACY_MODE_CONN_ID, NO_DISPLAYS};
 use crate::virtual_display_manager;
 use hbb_common::{allow_err, bail, config::Config, log, ResultType};
-use std::ops::{Deref, DerefMut};
+use std::{
+    io::Error,
+    ops::{Deref, DerefMut},
+};
 use virtual_display::MonitorMode;
 use winapi::{
     shared::{
@@ -9,16 +12,15 @@ use winapi::{
         ntdef::{NULL, WCHAR},
     },
     um::{
-        errhandlingapi::GetLastError,
         wingdi::{
             DEVMODEW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_ATTACHED_TO_DESKTOP,
             DISPLAY_DEVICE_MIRRORING_DRIVER, DISPLAY_DEVICE_PRIMARY_DEVICE, DM_POSITION,
         },
         winuser::{
             ChangeDisplaySettingsExW, EnumDisplayDevicesW, EnumDisplaySettingsExW,
-            EnumDisplaySettingsW, CDS_NORESET, CDS_RESET, CDS_SET_PRIMARY, CDS_UPDATEREGISTRY,
-            DISP_CHANGE_SUCCESSFUL, EDD_GET_DEVICE_INTERFACE_NAME, ENUM_CURRENT_SETTINGS,
-            ENUM_REGISTRY_SETTINGS,
+            EnumDisplaySettingsW, CDS_NORESET, CDS_RESET, CDS_SET_PRIMARY, CDS_TEST,
+            CDS_UPDATEREGISTRY, DISP_CHANGE_BADMODE, DISP_CHANGE_SUCCESSFUL,
+            EDD_GET_DEVICE_INTERFACE_NAME, ENUM_CURRENT_SETTINGS, ENUM_REGISTRY_SETTINGS,
         },
     },
 };
@@ -177,6 +179,73 @@ impl PrivacyModeImpl {
         }
     }
 
+    unsafe fn change_display_settings(
+        display_name: &[u16; 32],
+        new_primary_dm: &DEVMODEW,
+        init_flags: u32,
+    ) -> ResultType<bool> {
+        let mut i: DWORD = 0;
+        loop {
+            let mut flags = init_flags;
+            #[allow(invalid_value)]
+            let mut dd: DISPLAY_DEVICEW = std::mem::MaybeUninit::uninit().assume_init();
+            dd.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as _;
+            if FALSE == EnumDisplayDevicesW(NULL as _, i, &mut dd, EDD_GET_DEVICE_INTERFACE_NAME) {
+                break;
+            }
+            i += 1;
+            if (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0 {
+                continue;
+            }
+
+            if dd.DeviceName == *display_name {
+                flags |= CDS_SET_PRIMARY;
+            }
+
+            #[allow(invalid_value)]
+            let mut dm: DEVMODEW = std::mem::MaybeUninit::uninit().assume_init();
+            dm.dmSize = std::mem::size_of::<DEVMODEW>() as _;
+            dm.dmDriverExtra = 0;
+            if FALSE == EnumDisplaySettingsW(dd.DeviceName.as_ptr(), ENUM_CURRENT_SETTINGS, &mut dm)
+            {
+                bail!(
+                    "Failed EnumDisplaySettingsW, device name: {:?}, error: {:?}",
+                    std::string::String::from_utf16(&dd.DeviceName),
+                    Error::last_os_error()
+                );
+            }
+
+            dm.u1.s2_mut().dmPosition.x -= new_primary_dm.u1.s2().dmPosition.x;
+            dm.u1.s2_mut().dmPosition.y -= new_primary_dm.u1.s2().dmPosition.y;
+            dm.dmFields |= DM_POSITION;
+            let rc =
+                ChangeDisplaySettingsExW(dd.DeviceName.as_ptr(), &mut dm, NULL as _, flags, NULL);
+
+            if rc != DISP_CHANGE_SUCCESSFUL {
+                // ChangeDisplaySettingsExW may return DISP_CHANGE_BADMODE(-2) here.
+                // Try disable the displays if DISP_CHANGE_BADMODE.
+                if rc == DISP_CHANGE_BADMODE {
+                    log::warn!(
+                        "Failed ChangeDisplaySettingsEx, device name: {:?}, flags: {}, ret: {}",
+                        std::string::String::from_utf16(&dd.DeviceName),
+                        flags,
+                        rc
+                    );
+                    return Ok(false);
+                } else {
+                    log::error!(
+                        "Failed ChangeDisplaySettingsEx, device name: {:?}, flags: {}, ret: {}",
+                        std::string::String::from_utf16(&dd.DeviceName),
+                        flags,
+                        rc
+                    );
+                    bail!("Failed ChangeDisplaySettingsEx, ret: {}", rc);
+                }
+            }
+        }
+        Ok(true)
+    }
+
     fn set_primary_display(&mut self) -> ResultType<()> {
         let display = &self.virtual_displays[0];
 
@@ -193,66 +262,18 @@ impl PrivacyModeImpl {
                 )
             {
                 bail!(
-                    "Failed EnumDisplaySettingsW, device name: {:?}, error code: {}",
+                    "Failed EnumDisplaySettingsW, device name: {:?}, error code: {:?}",
                     std::string::String::from_utf16(&display.name),
-                    GetLastError()
+                    Error::last_os_error()
                 );
             }
 
-            let mut i: DWORD = 0;
-            loop {
-                let mut flags = CDS_UPDATEREGISTRY | CDS_NORESET;
-                #[allow(invalid_value)]
-                let mut dd: DISPLAY_DEVICEW = std::mem::MaybeUninit::uninit().assume_init();
-                dd.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as _;
-                if FALSE
-                    == EnumDisplayDevicesW(NULL as _, i, &mut dd, EDD_GET_DEVICE_INTERFACE_NAME)
-                {
-                    break;
-                }
-                i += 1;
-                if (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0 {
-                    continue;
-                }
-
-                if dd.DeviceName == display.name {
-                    flags |= CDS_SET_PRIMARY;
-                }
-
-                #[allow(invalid_value)]
-                let mut dm: DEVMODEW = std::mem::MaybeUninit::uninit().assume_init();
-                dm.dmSize = std::mem::size_of::<DEVMODEW>() as _;
-                dm.dmDriverExtra = 0;
-                if FALSE
-                    == EnumDisplaySettingsW(dd.DeviceName.as_ptr(), ENUM_CURRENT_SETTINGS, &mut dm)
-                {
-                    bail!(
-                        "Failed EnumDisplaySettingsW, device name: {:?}, error code: {}",
-                        std::string::String::from_utf16(&dd.DeviceName),
-                        GetLastError()
-                    );
-                }
-
-                dm.u1.s2_mut().dmPosition.x -= new_primary_dm.u1.s2().dmPosition.x;
-                dm.u1.s2_mut().dmPosition.y -= new_primary_dm.u1.s2().dmPosition.y;
-                dm.dmFields |= DM_POSITION;
-                let rc = ChangeDisplaySettingsExW(
-                    dd.DeviceName.as_ptr(),
-                    &mut dm,
-                    NULL as _,
-                    flags,
-                    NULL,
-                );
-
-                if rc != DISP_CHANGE_SUCCESSFUL {
-                    log::error!(
-                        "Failed ChangeDisplaySettingsEx, device name: {:?}, flags: {}, ret: {}",
-                        std::string::String::from_utf16(&dd.DeviceName),
-                        flags,
-                        rc
-                    );
-                    bail!("Failed ChangeDisplaySettingsEx, ret: {}", rc);
-                }
+            if Self::change_display_settings(&display.name, &new_primary_dm, CDS_TEST)? {
+                let _ = Self::change_display_settings(
+                    &display.name,
+                    &new_primary_dm,
+                    CDS_UPDATEREGISTRY | CDS_NORESET,
+                )?;
             }
         }
 
@@ -282,7 +303,10 @@ impl PrivacyModeImpl {
                         flags,
                         rc
                     );
-                    bail!("Failed ChangeDisplaySettingsEx, ret: {}", rc);
+                    bail!(
+                        "Failed to disable physical displays, ChangeDisplaySettingsEx, ret: {}",
+                        rc
+                    );
                 }
             }
         }
@@ -331,7 +355,10 @@ impl PrivacyModeImpl {
 
             let ret = ChangeDisplaySettingsExW(NULL as _, NULL as _, NULL as _, flags, NULL as _);
             if ret != DISP_CHANGE_SUCCESSFUL {
-                bail!("Failed ChangeDisplaySettingsEx, ret: {}", ret);
+                bail!(
+                    "Failed to commit display changes, ChangeDisplaySettingsEx, ret: {}",
+                    ret
+                );
             }
 
             // if !desk_current.is_null() {
