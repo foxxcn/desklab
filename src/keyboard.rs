@@ -106,7 +106,6 @@ pub mod client {
         }
 
         for key_event in event_to_key_events(&event, keyboard_mode, lock_modes) {
-            log::info!("REMOVE ME ==================== send key event {:?}", &key_event);
             send_key_event(&key_event);
         }
     }
