@@ -101,11 +101,13 @@ pub mod client {
         let keyboard_mode = get_keyboard_mode_enum(keyboard_mode);
 
         if is_long_press(&event) {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
             log::warn!("REMOVE ME ================= process_event is_long_press true");
             return;
         }
 
         for key_event in event_to_key_events(&event, keyboard_mode, lock_modes) {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
             log::info!("REMOVE ME ==================== send key event {:?}", &key_event);
             send_key_event(&key_event);
         }
@@ -573,6 +575,7 @@ pub fn event_to_key_events(
     };
 
     if key_events.is_empty() {
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
         log::warn!("REMOVE ME =========== key_events empty, {}, {:?}, {:?}, {:?}", peer.as_str(), keyboard_mode, event, key_event);
     }
 
@@ -832,6 +835,7 @@ pub fn legacy_keyboard_mode(event: &Event, mut key_event: KeyEvent) -> Vec<KeyEv
             }
             key_event.set_chr(chr as _);
         } else {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
             log::error!("Unknown key {:?}", &event);
             return events;
         }
