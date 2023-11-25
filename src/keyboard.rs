@@ -99,6 +99,8 @@ pub mod client {
         let keyboard_mode = get_keyboard_mode_enum(keyboard_mode);
 
         if is_long_press(&event) {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            log::warn!("REMOVE ME ================= process_event is_long_press true");
             return;
         }
 
@@ -218,6 +220,8 @@ fn get_keyboard_mode() -> String {
     #[cfg(not(any(feature = "flutter", feature = "cli")))]
     if let Some(session) = CUR_SESSION.lock().unwrap().as_ref() {
         return session.get_keyboard_mode();
+    } else {
+        log::warn!("REMOVE ME ==================== get_keyboard_mode {:?}, no CUR_SESSION ", &key_event);
     }
     #[cfg(feature = "flutter")]
     if let Some(session) = flutter::get_cur_session() {
@@ -536,15 +540,15 @@ pub fn event_to_key_events(
     #[cfg(any(target_os = "android", target_os = "ios"))]
     let key_events;
     key_events = match keyboard_mode {
-        KeyboardMode::Map => match map_keyboard_mode(peer.as_str(), event, key_event) {
+        KeyboardMode::Map => match map_keyboard_mode(peer.as_str(), event, key_event.clone()) {
             Some(event) => [event].to_vec(),
             None => Vec::new(),
         },
-        KeyboardMode::Translate => translate_keyboard_mode(peer.as_str(), event, key_event),
+        KeyboardMode::Translate => translate_keyboard_mode(peer.as_str(), event, key_event.clone()),
         _ => {
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             {
-                legacy_keyboard_mode(event, key_event)
+                legacy_keyboard_mode(event, key_event.clone())
             }
             #[cfg(any(target_os = "android", target_os = "ios"))]
             {
@@ -552,6 +556,11 @@ pub fn event_to_key_events(
             }
         }
     };
+
+    if key_events.is_empty() {
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        log::warn!("REMOVE ME =========== key_events empty, {}, {:?}, {:?}, {:?}", peer.as_str(), keyboard_mode, event, key_event);
+    }
 
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let is_numpad_key = is_numpad_key(&event);
@@ -573,6 +582,8 @@ pub fn send_key_event(key_event: &KeyEvent) {
     #[cfg(not(any(feature = "flutter", feature = "cli")))]
     if let Some(session) = CUR_SESSION.lock().unwrap().as_ref() {
         session.send_key_event(key_event);
+    } else {
+        log::warn!("REMOVE ME ==================== send_key_event {:?}, no CUR_SESSION ", &key_event);
     }
     #[cfg(feature = "flutter")]
     if let Some(session) = flutter::get_cur_session() {
@@ -584,6 +595,8 @@ pub fn get_peer_platform() -> String {
     #[cfg(not(any(feature = "flutter", feature = "cli")))]
     if let Some(session) = CUR_SESSION.lock().unwrap().as_ref() {
         return session.peer_platform();
+    } else {
+        log::warn!("REMOVE ME ==================== get_peer_platfrom {:?}, no CUR_SESSION ", &key_event);
     }
     #[cfg(feature = "flutter")]
     if let Some(session) = flutter::get_cur_session() {
