@@ -301,6 +301,12 @@ jobs:
               extra-build-args: "",
               arch: x86_64
             }
+          - {
+              target: silicon-apple-darwin,
+              os: macos-13-xlarge,
+              extra-build-args: "",
+              arch: silicon
+            }
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
