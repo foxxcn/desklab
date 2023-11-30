@@ -73,7 +73,7 @@ pub fn get_display_server() -> String {
             session = sid;
         }
         if session.is_empty() {
-            session = fs::read_to_string("cat /proc/self/sessionid").unwrap_or_default();
+            session = fs::read_to_string("/proc/self/sessionid").unwrap_or_default();
             if session == INVALID_SESSION {
                 session = "".to_owned();
             }
