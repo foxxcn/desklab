@@ -239,9 +239,9 @@ impl Recorder for PipeWireRecorder {
             let buf = buf
                 .into_mapped_buffer_readable()
                 .map_err(|_| GStreamerError("Failed to map buffer.".into()))?;
-            if let Err(..) = crate::would_block_if_equal(&mut self.saved_raw_data, buf.as_slice()) {
-                return Ok(PixelProvider::NONE);
-            }
+            // if let Err(..) = crate::would_block_if_equal(&mut self.saved_raw_data, buf.as_slice()) {
+            //     return Ok(PixelProvider::NONE);
+            // }
             let buf_size = buf.get_size();
             // BGRx is 4 bytes per pixel
             if buf_size != (w * h * 4) {
