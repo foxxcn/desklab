@@ -731,6 +731,7 @@ impl Connection {
                         handle_mouse(&msg, id);
                     }
                     MessageInput::Key((mut msg, press)) => {
+                        log::info!("REMOVE ME =========== handle_input, {} event: {:?} ", if press {"press"} else {"release"}, msg);
                         // todo: press and down have similar meanings.
                         if press && msg.mode.enum_value() == Ok(KeyboardMode::Legacy) {
                             msg.down = true;

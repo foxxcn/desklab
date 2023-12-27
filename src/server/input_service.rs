@@ -1149,6 +1149,7 @@ fn release_capslock() {
 #[cfg(not(target_os = "macos"))]
 #[inline]
 fn simulate_(event_type: &EventType) {
+    log::info!("REMOVE ME ===================== simulate_ evt: {:?}", event_type);
     match rdev::simulate(&event_type) {
         Ok(()) => (),
         Err(_simulate_error) => {
@@ -1177,6 +1178,7 @@ fn map_keyboard_mode(evt: &KeyEvent) {
         let mut en = ENIGO.lock().unwrap();
         let code = evt.chr() as u16;
 
+        log::info!("REMOVE ME ===================== map_keyboard_mode enigo: {}", code);
         if evt.down {
             en.key_down(enigo::Key::Raw(code)).ok();
         } else {
