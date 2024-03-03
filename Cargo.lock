@@ -272,7 +272,7 @@ dependencies = [
 [[package]]
 name = "arboard"
 version = "3.3.1"
-source = "git+https://github.com/fufesou/arboard?branch=feat/x11_set_conn_timeout#956b5f8693b4fc7fddd7b8cafbe1111a892b34b1"
+source = "git+https://github.com/fufesou/arboard?branch=tmp/win_clipboard_msg#a99c0b4fea9a5e6e315834ac501d228b098b94bd"
 dependencies = [
  "clipboard-win",
  "core-graphics 0.23.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1728,7 +1728,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.8.1",
+ "libloading 0.7.4",
 ]
 
 [[package]]

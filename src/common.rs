@@ -297,14 +297,21 @@ pub fn check_clipboard(
         let _lock = ARBOARD_MTX.lock().unwrap();
         ctx2.get_text()
     };
-    if let Ok(content) = content {
-        if content.len() < 2_000_000 && !content.is_empty() {
-            let changed = content != *old.lock().unwrap();
-            if changed {
-                log::info!("{} update found on {}", CLIPBOARD_NAME, side);
-                *old.lock().unwrap() = content.clone();
-                return Some(create_clipboard_msg(content));
+    match content {
+        Ok(content) => {
+            if content.len() < 2_000_000 && !content.is_empty() {
+                let changed = content != *old.lock().unwrap();
+                if changed {
+                    log::info!("REMOVE ME ======== {} update found on {}", CLIPBOARD_NAME, side);
+                    *old.lock().unwrap() = content.clone();
+                    return Some(create_clipboard_msg(content));
+                }
+            } else {
+                log::warn!("REMOVE ME ======== {} is too large or empty", CLIPBOARD_NAME);
             }
+        }
+        Err(e) => {
+            log::error!("REMOVE ME ======== Failed to get clipboard: {}", e);
         }
     }
     None
