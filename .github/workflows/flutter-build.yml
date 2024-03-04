@@ -79,7 +79,7 @@ jobs:
         with:
           channel: "stable"
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
+          cache: false
 
       - name: Replace engine with rustdesk custom flutter engine
         run: |
