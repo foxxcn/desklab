@@ -302,12 +302,23 @@ pub fn check_clipboard(
             if content.len() < 2_000_000 && !content.is_empty() {
                 let changed = content != *old.lock().unwrap();
                 if changed {
-                    log::info!("REMOVE ME ======== {} update found on {}", CLIPBOARD_NAME, side);
+                    log::info!(
+                        "REMOVE ME ======== {} update found on {}",
+                        CLIPBOARD_NAME,
+                        side
+                    );
                     *old.lock().unwrap() = content.clone();
                     return Some(create_clipboard_msg(content));
                 }
-            } else {
-                log::warn!("REMOVE ME ======== {} is too large or empty", CLIPBOARD_NAME);
+            }
+        }
+        Err(arboard::Error::WinFormatNotAvailable { description }) => {
+            log::warn!(
+                "REMOVE ME ============= WinFormatNotAvailable {} ",
+                description
+            );
+            if let Err(e) = ctx2.set_text("test text from RustDesk service".to_owned()) {
+                log::error!("REMOVE ME ============= Failed to set clipboard: {}", e);
             }
         }
         Err(e) => {
@@ -1443,12 +1454,12 @@ impl ClipboardContext {
 
     #[inline]
     #[cfg(any(target_os = "windows", target_os = "macos"))]
-    pub fn get_text(&mut self) -> ResultType<String> {
-        Ok(self.0.get_text()?)
+    pub fn get_text(&mut self) -> Result<String, arboard::Error> {
+        self.0.get_text()
     }
 
     #[cfg(target_os = "linux")]
-    pub fn get_text(&mut self) -> ResultType<String> {
+    pub fn get_text(&mut self) -> Result<String, arboard::Error> {
         let dur = arboard::Clipboard::get_x11_server_conn_timeout();
         let dur_bak = dur;
         let _restore_timeout_on_ret = SimpleCallOnReturn {
@@ -1461,10 +1472,10 @@ impl ClipboardContext {
             match self.0.get_text() {
                 Ok(s) => return Ok(s),
                 Err(arboard::Error::X11ServerConnTimeout) => continue,
-                Err(err) => return Err(err.into()),
+                Err(err) => return Err(err),
             }
         }
-        bail!("Failed to get text, timeout");
+        arboard::Error::Unknown!("Failed to get text, timeout");
     }
 
     #[inline]
