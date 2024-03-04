@@ -282,7 +282,7 @@ pub fn create_clipboard_msg(content: String) -> Message {
     msg
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[cfg(not(any(target_os = "android", target_os = "ios", target_os = "windows")))]
 pub fn check_clipboard(
     ctx: &mut Option<ClipboardContext>,
     old: Option<&Arc<Mutex<String>>>,
@@ -324,6 +324,51 @@ pub fn check_clipboard(
         Err(e) => {
             log::error!("REMOVE ME ======== Failed to get clipboard: {}", e);
         }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+pub fn check_clipboard(
+    _ctx: &mut Option<ClipboardContext>,
+    old: Option<&Arc<Mutex<String>>>,
+) -> Option<Message> {
+    let side = if old.is_none() { "host" } else { "client" };
+    let old = if let Some(old) = old { old } else { &CONTENT };
+    let content = {
+        let _lock = ARBOARD_MTX.lock().unwrap();
+        match clip::get_text() {
+            Ok((get, content)) => {
+                if get {
+                    Some(content)
+                } else {
+                    None
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to get clipboard: {}", e);
+                None
+            }
+        }
+    }?;
+    if content.len() < 2_000_000 && !content.is_empty() {
+        let changed = content != *old.lock().unwrap();
+        if changed {
+            log::info!(
+                "REMOVE ME ======== {} update found on {}",
+                CLIPBOARD_NAME,
+                side
+            );
+            *old.lock().unwrap() = content.clone();
+            return Some(create_clipboard_msg(content));
+        }
+    } else {
+        log::warn!(
+            "REMOVE ME ======== {} update found on {} but too large {}",
+            CLIPBOARD_NAME,
+            side,
+            content.len()
+        );
     }
     None
 }
@@ -388,6 +433,7 @@ pub fn update_clipboard(clipboard: Clipboard, old: Option<&Arc<Mutex<String>>>) 
             // ctx.set_text may crash if content is empty
             return;
         }
+        #[cfg(not(target_os = "windows"))]
         match ClipboardContext::new() {
             Ok(mut ctx) => {
                 let side = if old.is_none() { "host" } else { "client" };
@@ -399,6 +445,22 @@ pub fn update_clipboard(clipboard: Clipboard, old: Option<&Arc<Mutex<String>>>) 
             }
             Err(err) => {
                 log::error!("Failed to create clipboard context: {}", err);
+            }
+        }
+        #[cfg(target_os = "windows")]
+        match clip::set_text(&content) {
+            Ok(ok) => {
+                let side = if old.is_none() { "host" } else { "client" };
+                if ok {
+                    let old = if let Some(old) = old { old } else { &CONTENT };
+                    *old.lock().unwrap() = content.clone();
+                    log::debug!("{} updated on {}", CLIPBOARD_NAME, side);
+                } else {
+                    log::warn!("Failed to set clipboard on {}", side);
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to set clipboard: {}", e);
             }
         }
     }
