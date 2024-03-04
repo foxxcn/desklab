@@ -1,7 +1,7 @@
 #include "../dacap_clip/clip.h"
 
 extern "C" bool _set_text(const char* text) {
-    return clip::set_text("Hello World");
+    return clip::set_text(text);
 }
 
 extern "C" bool _get_text(char** text) {
