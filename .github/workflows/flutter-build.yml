@@ -1787,7 +1787,7 @@ jobs:
 
       - name: Build archlinux package
         if: ${{ matrix.job.extra-build-features == '' }}
-        uses: rustdesk-org/arch-makepkg-action@master
+        uses: fufesou/arch-makepkg-action@refact/no_update_pkgs
         with:
           packages: >
             llvm
