@@ -555,6 +555,8 @@ impl RendezvousMediator {
         let pk = Config::get_key_pair().1;
         let uuid = hbb_common::get_uuid();
         let id = Config::get_id();
+        println!("TEST ====================== pk {:?}", pk);
+        println!("TEST ====================== generated uuid {:?}", uuid);
         msg_out.set_register_pk(RegisterPk {
             id,
             uuid: uuid.into(),
@@ -569,6 +571,7 @@ impl RendezvousMediator {
         {
             let mut solving = SOLVING_PK_MISMATCH.lock().await;
             if solving.is_empty() || *solving == self.host {
+                println!("TEST ====================== UUID_MISMATCH received from {}", self.host);
                 log::info!("UUID_MISMATCH received from {}", self.host);
                 Config::set_key_confirmed(false);
                 Config::update_id();

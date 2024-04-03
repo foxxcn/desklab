@@ -371,6 +371,7 @@ pub fn init_log(_is_async: bool, _name: &str) -> Option<flexi_logger::LoggerHand
             if !_name.is_empty() {
                 path.push(_name);
             }
+            println!("TEST ====================== log path {:?}", path.display());
             use flexi_logger::*;
             if let Ok(x) = Logger::try_with_env_or_str("debug") {
                 logger_holder = x

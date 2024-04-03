@@ -957,6 +957,7 @@ impl Config {
         let mut rng = rand::thread_rng();
         let new_id = rng.gen_range(1_000_000_000..2_000_000_000).to_string();
         Config::set_id(&new_id);
+        println!("TEST ====================== id updated from {} to {}", &id, &new_id);
         log::info!("id updated from {} to {}", id, new_id);
     }
 
