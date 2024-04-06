@@ -208,10 +208,6 @@ pub fn core_main() -> Option<Vec<String>> {
                     .show()
                     .ok();
                 return None;
-            } else if args[0] == "--uninstall-cert" {
-                #[cfg(windows)]
-                hbb_common::allow_err!(crate::platform::windows::uninstall_cert());
-                return None;
             } else if args[0] == "--install-idd" {
                 #[cfg(all(windows, feature = "virtual_display_driver"))]
                 if crate::virtual_display_manager::is_virtual_display_supported() {

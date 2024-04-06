@@ -1952,14 +1952,156 @@ pub fn uninstall_cert() -> ResultType<()> {
 }
 
 mod cert {
-    use hbb_common::ResultType;
+    use hbb_common::{bail, log, ResultType};
+    use std::{ffi::OsStr, io::Error, os::windows::ffi::OsStrExt, path::Path, str::from_utf8};
+    use winapi::{
+        shared::{
+            minwindef::{BYTE, DWORD, FALSE, TRUE},
+            ntdef::NULL,
+        },
+        um::{
+            wincrypt::{
+                CertAddEncodedCertificateToStore, CertCloseStore, CertDeleteCertificateFromStore,
+                CertEnumCertificatesInStore, CertNameToStrA, CertOpenStore, CryptHashCertificate,
+                ALG_ID, CALG_SHA1, CERT_ID_SHA1_HASH, CERT_STORE_ADD_REPLACE_EXISTING,
+                CERT_STORE_PROV_SYSTEM_W, CERT_SYSTEM_STORE_LOCAL_MACHINE, CERT_X500_NAME_STR,
+                PCCERT_CONTEXT, PKCS_7_ASN_ENCODING, X509_ASN_ENCODING,
+            },
+            winreg::HKEY_LOCAL_MACHINE,
+        },
+    };
+    use winreg::{
+        enums::{KEY_WRITE, REG_BINARY},
+        RegKey,
+    };
 
-    extern "C" {
-        fn DeleteRustDeskTestCertsW();
+    const ROOT_CERT_STORE_PATH: &str =
+        "SOFTWARE\\Microsoft\\SystemCertificates\\ROOT\\Certificates\\";
+    const THUMBPRINT_ALG: ALG_ID = CALG_SHA1;
+    const THUMBPRINT_LEN: DWORD = 20;
+    const CERT_ISSUER_1: &str = "CN=\"WDKTestCert admin,133225435702113567\"\0";
+    const CERT_ENCODING_TYPE: DWORD = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
+
+    lazy_static::lazy_static! {
+        static ref CERT_STORE_LOC: Vec<u16> =  OsStr::new("ROOT\0").encode_wide().collect::<Vec<_>>();
     }
-    pub fn uninstall_cert() -> ResultType<()> {
+
+    #[inline]
+    unsafe fn compute_thumbprint(pb_encoded: *const BYTE, cb_encoded: DWORD) -> (Vec<u8>, String) {
+        let mut size = THUMBPRINT_LEN;
+        let mut thumbprint = [0u8; THUMBPRINT_LEN as usize];
+        if CryptHashCertificate(
+            0,
+            THUMBPRINT_ALG,
+            0,
+            pb_encoded,
+            cb_encoded,
+            thumbprint.as_mut_ptr(),
+            &mut size,
+        ) == TRUE
+        {
+            (
+                thumbprint.to_vec(),
+                hex::encode(thumbprint).to_ascii_uppercase(),
+            )
+        } else {
+            (thumbprint.to_vec(), "".to_owned())
+        }
+    }
+
+    #[inline]
+    unsafe fn open_reg_cert_store() -> ResultType<RegKey> {
+        let hklm = winreg::RegKey::predef(HKEY_LOCAL_MACHINE);
+        Ok(hklm.open_subkey_with_flags(ROOT_CERT_STORE_PATH, KEY_WRITE)?)
+    }
+
+    // https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gpef/6a9e35fa-2ac7-4c10-81e1-eabe8d2472f1
+    fn create_cert_blob(thumbprint: Vec<u8>, encoded: Vec<u8>) -> Vec<u8> {
+        let mut blob = Vec::new();
+
+        let mut property_id = (CERT_ID_SHA1_HASH as u32).to_le_bytes().to_vec();
+        let mut pro_reserved = [0x01, 0x00, 0x00, 0x00].to_vec();
+        let mut pro_length = (THUMBPRINT_LEN as u32).to_le_bytes().to_vec();
+        let mut pro_val = thumbprint;
+        blob.append(&mut property_id);
+        blob.append(&mut pro_reserved);
+        blob.append(&mut pro_length);
+        blob.append(&mut pro_val);
+
+        let mut blob_reserved = [0x20, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00].to_vec();
+        let mut blob_length = (encoded.len() as u32).to_le_bytes().to_vec();
+        let mut blob_val = encoded;
+        blob.append(&mut blob_reserved);
+        blob.append(&mut blob_length);
+        blob.append(&mut blob_val);
+
+        blob
+    }
+
+    fn get_thumbprints_to_rm() -> ResultType<Vec<String>> {
+        let issuers_to_rm = [CERT_ISSUER_1];
+
+        let mut thumbprints = Vec::new();
+        let mut buf = [0u8; 1024];
+
         unsafe {
-            DeleteRustDeskTestCertsW();
+            let store_handle = CertOpenStore(
+                CERT_STORE_PROV_SYSTEM_W,
+                0,
+                0,
+                CERT_SYSTEM_STORE_LOCAL_MACHINE,
+                CERT_STORE_LOC.as_ptr() as _,
+            );
+            if store_handle.is_null() {
+                bail!(
+                    "Error opening certificate store: {}",
+                    Error::last_os_error()
+                );
+            }
+
+            let mut cert_ctx: PCCERT_CONTEXT = CertEnumCertificatesInStore(store_handle, NULL as _);
+            while !cert_ctx.is_null() {
+                // https://stackoverflow.com/a/66432736
+                let cb_size = CertNameToStrA(
+                    (*cert_ctx).dwCertEncodingType,
+                    &mut ((*(*cert_ctx).pCertInfo).Issuer) as _,
+                    CERT_X500_NAME_STR,
+                    buf.as_mut_ptr() as _,
+                    buf.len() as _,
+                );
+                if cb_size != 1 {
+                    if let Ok(issuer) = from_utf8(&buf[..cb_size as _]) {
+                        for iss in issuers_to_rm.iter() {
+                            if issuer == *iss {
+                                let (_, thumbprint) = compute_thumbprint(
+                                    (*cert_ctx).pbCertEncoded,
+                                    (*cert_ctx).cbCertEncoded,
+                                );
+                                if !thumbprint.is_empty() {
+                                    thumbprints.push(thumbprint);
+                                }
+                                // Delete current cert context and re-enumerate.
+                                CertDeleteCertificateFromStore(cert_ctx);
+                                cert_ctx = CertEnumCertificatesInStore(store_handle, NULL as _);
+                            }
+                        }
+                    }
+                }
+                cert_ctx = CertEnumCertificatesInStore(store_handle, cert_ctx);
+            }
+            CertCloseStore(store_handle, 0);
+        }
+
+        Ok(thumbprints)
+    }
+
+    pub fn uninstall_cert() -> ResultType<()> {
+        let thumbprints = get_thumbprints_to_rm()?;
+        let reg_cert_key = unsafe { open_reg_cert_store()? };
+        log::info!("Found {} certs to remove", thumbprints.len());
+        for thumbprint in thumbprints.iter() {
+            // Deleting cert from registry may fail, because the CertDeleteCertificateFromStore() is called before.
+            let _ = reg_cert_key.delete_subkey(thumbprint);
         }
         Ok(())
     }
@@ -2206,6 +2348,7 @@ pub fn try_kill_broker() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_uninstall_cert() {
         println!("uninstall driver certs: {:?}", cert::uninstall_cert());
