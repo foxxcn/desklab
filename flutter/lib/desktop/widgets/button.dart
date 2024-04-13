@@ -156,7 +156,7 @@ class _FixedWidthButtonState extends State<FixedWidthButton> {
                     maxLines: widget.maxLines ?? 1,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: widget.textSize ?? 12.0,
+                        // fontSize: widget.textSize ?? 12.0,
                         color: widget.isOutline
                             ? widget.textColor ??
                                 Theme.of(context).textTheme.titleLarge?.color
