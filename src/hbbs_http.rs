@@ -20,19 +20,11 @@ impl<T: DeserializeOwned> TryFrom<Response> for HbbHttpResponse<T> {
 
     fn try_from(resp: Response) -> Result<Self, <Self as TryFrom<Response>>::Error> {
         let status = resp.status();
-        let text = resp.text()?;
-        let map: Map<String, Value> = match serde_json::from_str(&text) {
-            Ok(v) => v,
-            Err(e) => {
-                hbb_common::log::error!(
-                    "Failed to parse response, code: {}, text: {:?}, decode error: {:?}",
-                    status,
-                    &text,
-                    e
-                );
-                return Ok(Self::Error(e.to_string()));
-            }
-        };
+        if !status.is_success() {
+            hbb_common::log::error!("Failed to request, response details: {:?}", &resp);
+            return Ok(Self::Error(format!("Status: {}", status)));
+        }
+        let map = resp.json::<Map<String, Value>>()?;
         if let Some(error) = map.get("error") {
             if let Some(err) = error.as_str() {
                 Ok(Self::Error(err.to_owned()))
