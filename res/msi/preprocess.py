@@ -36,6 +36,10 @@ g_arpsystemcomponent = {
 }
 
 
+def real_path(relative_path) -> Path:
+    return Path(sys.argv[0]).parent.joinpath(relative_path).resolve()
+
+
 def make_parser():
     parser = argparse.ArgumentParser(description="Msi preprocess script.")
     parser.add_argument(
@@ -75,6 +79,13 @@ def make_parser():
         default="PURSLANE",
         help="The app manufacturer.",
     )
+    parser.add_argument(
+        "-l",
+        "--license",
+        type=str,
+        default="",
+        help="The license file.",
+    )
     return parser
 
 
@@ -98,16 +109,15 @@ def read_lines_and_start_index(file_path, tag_start, tag_end):
     return lines, index_start
 
 
-def insert_components_between_tags(lines, index_start, app_name, dist_dir):
+def insert_file_components_between_tags(lines, index_start, app_name, dist_path: Path):
     indent = g_indent_unit * 3
-    path = Path(dist_dir)
     idx = 1
-    for file_path in path.glob("**/*"):
+    for file_path in dist_path.glob("**/*"):
         if file_path.is_file():
             if file_path.name.lower() == f"{app_name}.exe".lower():
                 continue
 
-            subdir = str(file_path.parent.relative_to(path))
+            subdir = str(file_path.parent.relative_to(dist_path))
             dir_attr = ""
             if subdir != ".":
                 dir_attr = f'Subdirectory="{subdir}"'
@@ -126,18 +136,18 @@ def insert_components_between_tags(lines, index_start, app_name, dist_dir):
     return True
 
 
-def gen_auto_component(app_name, dist_dir):
+def gen_auto_file_components(app_name, dist_path: Path):
     return gen_content_between_tags(
         "Package/Components/RustDesk.wxs",
         "<!--$AutoComonentStart$-->",
         "<!--$AutoComponentEnd$-->",
-        lambda lines, index_start: insert_components_between_tags(
-            lines, index_start, app_name, dist_dir
+        lambda lines, index_start: insert_file_components_between_tags(
+            lines, index_start, app_name, dist_path
         ),
     )
 
 
-def gen_pre_vars(args, dist_dir):
+def gen_pre_vars(args, dist_path: Path):
     def func(lines, index_start):
         upgrade_code = uuid.uuid5(uuid.NAMESPACE_OID, app_name + ".exe")
 
@@ -150,7 +160,7 @@ def gen_pre_vars(args, dist_dir):
             f'{indent}<?define ProductLower="{args.app_name.lower()}" ?>\n',
             f'{indent}<?define RegKeyRoot=".$(var.ProductLower)" ?>\n',
             f'{indent}<?define RegKeyInstall="$(var.RegKeyRoot)\Install" ?>\n',
-            f'{indent}<?define BuildDir="{dist_dir}" ?>\n',
+            f'{indent}<?define BuildDir="{dist_path}" ?>\n',
             f'{indent}<?define BuildDate="{g_build_date}" ?>\n',
             "\n",
             f"{indent}<!-- The UpgradeCode must be consistent for each product. ! -->\n"
@@ -167,7 +177,7 @@ def gen_pre_vars(args, dist_dir):
 
 
 def replace_app_name_in_langs(app_name):
-    langs_dir = Path(sys.argv[0]).parent.joinpath("Package/Language")
+    langs_dir = real_path("Package/Language")
     for file_path in langs_dir.glob("*.wxl"):
         with open(file_path, "r") as f:
             lines = f.readlines()
@@ -201,9 +211,23 @@ def gen_upgrade_info():
     )
 
 
-def gen_custom_dialog_bitmaps():
+def gen_ui_vars(app_name, args):
     def func(lines, index_start):
         indent = g_indent_unit * 2
+
+        to_insert_lines = []
+        license_file = args.license
+        if license_file == '':
+            license_file = f'{app_name} License.rtf'
+        if real_path(f'Package/{license_file}').exists():
+            to_insert_lines.append(
+                f'{indent}<WixVariable Id="WixUILicenseRtf" Value="{license_file}" />\n'
+            )
+
+        to_insert_lines.append("\n")
+        to_insert_lines.append(
+            f"{indent}<!--https://wixtoolset.org/docs/tools/wixext/wixui/#customizing-a-dialog-set-->\n"
+        )
 
         # https://wixtoolset.org/docs/tools/wixext/wixui/#customizing-a-dialog-set
         vars = [
@@ -214,9 +238,8 @@ def gen_custom_dialog_bitmaps():
             "WixUINewIco",
             "WixUIUpIco",
         ]
-        to_insert_lines = []
         for var in vars:
-            if Path(f"Package/Resources/{var}.bmp").exists():
+            if real_path(f"Package/Resources/{var}.bmp").exists():
                 to_insert_lines.append(
                     f'{indent}<WixVariable Id="{var}" Value="Resources\\{var}.bmp" />\n'
                 )
@@ -227,8 +250,8 @@ def gen_custom_dialog_bitmaps():
 
     return gen_content_between_tags(
         "Package/Package.wxs",
-        "<!--$CustomBitmapsStart$-->",
-        "<!--$CustomBitmapsEnd$-->",
+        "<!--$UIVarsStart$-->",
+        "<!--$UIVarsEnd$-->",
         func,
     )
 
@@ -266,18 +289,17 @@ def gen_custom_ARPSYSTEMCOMPONENT_False(args):
     )
 
 
-def get_folder_size(folder_path):
+def get_folder_size(folder_path: Path):
     total_size = 0
 
-    folder = Path(folder_path)
-    for file in folder.glob("**/*"):
+    for file in folder_path.glob("**/*"):
         if file.is_file():
             total_size += file.stat().st_size
 
     return total_size
 
 
-def gen_custom_ARPSYSTEMCOMPONENT_True(args, dist_dir):
+def gen_custom_ARPSYSTEMCOMPONENT_True(args, dist_path: Path):
     def func(lines, index_start):
         indent = g_indent_unit * 5
 
@@ -311,7 +333,7 @@ def gen_custom_ARPSYSTEMCOMPONENT_True(args, dist_dir):
             f'{indent}<RegistryValue Type="integer" Name="Language" Value="[ProductLanguage]" />\n'
         )
 
-        estimated_size = get_folder_size(dist_dir)
+        estimated_size = get_folder_size(dist_path)
         lines_new.append(
             f'{indent}<RegistryValue Type="integer" Name="EstimatedSize" Value="{estimated_size}" />\n'
         )
@@ -362,7 +384,7 @@ def gen_custom_ARPSYSTEMCOMPONENT_True(args, dist_dir):
     )
 
 
-def gen_custom_ARPSYSTEMCOMPONENT(args, dist_dir):
+def gen_custom_ARPSYSTEMCOMPONENT(args, dist_path: Path):
     try:
         custom_arp = json.loads(args.custom_arp)
         g_arpsystemcomponent.update(custom_arp)
@@ -371,13 +393,13 @@ def gen_custom_ARPSYSTEMCOMPONENT(args, dist_dir):
         return False
 
     if args.arp:
-        return gen_custom_ARPSYSTEMCOMPONENT_True(args, dist_dir)
+        return gen_custom_ARPSYSTEMCOMPONENT_True(args, dist_path)
     else:
         return gen_custom_ARPSYSTEMCOMPONENT_False(args)
 
 
 def gen_content_between_tags(filename, tag_start, tag_end, func):
-    target_file = Path(sys.argv[0]).parent.joinpath(filename)
+    target_file = real_path(filename)
     lines, index_start = read_lines_and_start_index(target_file, tag_start, tag_end)
     if lines is None:
         return False
@@ -392,7 +414,7 @@ def gen_content_between_tags(filename, tag_start, tag_end, func):
 
 def init_global_vars(args):
     var_file = "../../src/version.rs"
-    if not Path(var_file).exists():
+    if not real_path(var_file).exists():
         print(f"Error: {var_file} not found")
         return False
 
@@ -426,7 +448,7 @@ def init_global_vars(args):
 
 
 def replace_component_guids_in_wxs():
-    langs_dir = Path(sys.argv[0]).parent.joinpath("Package")
+    langs_dir = real_path("Package")
     for file_path in langs_dir.glob("**/*.wxs"):
         with open(file_path, "r") as f:
             lines = f.readlines()
@@ -446,12 +468,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     app_name = args.app_name
-    dist_dir = Path(sys.argv[0]).parent.joinpath(args.dist_dir).resolve()
+    dist_path: Path = real_path(args.dist_dir)
 
     if not init_global_vars(args):
         sys.exit(-1)
 
-    if not gen_pre_vars(args, dist_dir):
+    if not gen_pre_vars(args, dist_path):
         sys.exit(-1)
 
     if app_name != "RustDesk":
@@ -460,13 +482,13 @@ if __name__ == "__main__":
     if not gen_upgrade_info():
         sys.exit(-1)
 
-    if not gen_custom_ARPSYSTEMCOMPONENT(args, dist_dir):
+    if not gen_custom_ARPSYSTEMCOMPONENT(args, dist_path):
         sys.exit(-1)
 
-    if not gen_auto_component(app_name, dist_dir):
+    if not gen_auto_file_components(app_name, dist_path):
         sys.exit(-1)
 
-    if not gen_custom_dialog_bitmaps():
+    if not gen_ui_vars(app_name, args):
         sys.exit(-1)
 
-    replace_app_name_in_langs(args.app_name)
+    replace_app_name_in_langs(app_name)

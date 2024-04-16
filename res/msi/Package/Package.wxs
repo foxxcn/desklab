@@ -15,8 +15,9 @@
 		<Media Id="1" Cabinet="cab1.cab" EmbedCab="yes" CompressionLevel="high" />
 		<Icon Id="AppIcon" SourceFile="Resources\icon.ico" />
 
-		<!-- User Interface -->
-		<WixVariable Id="WixUILicenseRtf" Value="RustDesk License.rtf" />
+		<!-- User interface variables, except for the bitmaps -->
+		<!--$UIVarsStart$-->
+		<!--$UIVarsEnd$-->
 
 		<ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 		<UIRef Id="WixUI_ErrorProgressText" />
@@ -50,8 +51,5 @@
 			<ComponentRef Id="Product.Registry.PersistedShortcutProperties" />
 		</Feature>
 
-		<!--https://wixtoolset.org/docs/tools/wixext/wixui/#customizing-a-dialog-set-->
-		<!--$CustomBitmapsStart$-->
-		<!--$CustomBitmapsEnd$-->
 	</Package>
 </Wix>
