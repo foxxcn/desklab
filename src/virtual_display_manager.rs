@@ -1,5 +1,9 @@
-use hbb_common::{bail, platform::windows::is_windows_version_or_greater, ResultType};
-use std::sync::atomic;
+use hbb_common::{bail, log, platform::windows::is_windows_version_or_greater, ResultType};
+use std::{
+    collections::HashSet,
+    sync::atomic,
+    time::{Duration, Instant},
+};
 
 // This string is defined here.
 //  https://github.com/fufesou/RustDeskIddDriver/blob/b370aad3f50028b039aad211df60c8051c4a64d6/RustDeskIddDriver/RustDeskIddDriver.inf#LL73C1-L73C40
@@ -147,18 +151,51 @@ pub fn reset_all() -> ResultType<()> {
     }
 }
 
+fn get_new_device_name(
+    device_names: &HashSet<String>,
+    device_string: &str,
+    timeout: Duration,
+) -> String {
+    let now = Instant::now();
+    loop {
+        let device_names_af: HashSet<String> = windows::get_device_names(Some(device_string))
+            .into_iter()
+            .collect();
+        let diff_names: Vec<_> = device_names_af.difference(&device_names).collect();
+        if diff_names.len() == 1 {
+            return diff_names[0].clone();
+        } else if diff_names.len() > 1 {
+            log::error!(
+                "Failed to get diff device names after plugin virtual display, more than one diff names: {:?}",
+                &diff_names
+            );
+            return "".to_string();
+        }
+        if now.elapsed() > timeout {
+            log::error!("Failed to get diff device names after plugin virtual display",);
+            return "".to_string();
+        }
+        // Sleep is needed here to wait for the virtual display to be ready.
+        // Sleep is acceptable here because the user is waiting for the virtual display to be ready.
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
 pub mod rustdesk_idd {
-    use super::windows;
+    use super::{get_new_device_name, windows, RUSTDESK_IDD_DEVICE_STRING};
     use hbb_common::{allow_err, bail, lazy_static, log, ResultType};
     use std::{
-        collections::{HashMap, HashSet},
+        collections::HashMap,
         sync::{Arc, Mutex},
+        time::Duration,
     };
 
     // virtual display index range: 0 - 2 are reserved for headless and other special uses.
     const VIRTUAL_DISPLAY_INDEX_FOR_HEADLESS: u32 = 0;
     const VIRTUAL_DISPLAY_START_FOR_PEER: u32 = 1;
     const VIRTUAL_DISPLAY_MAX_COUNT: u32 = 5;
+
+    const MONITOR_READ_TIMEOUT: Duration = Duration::from_millis(250);
 
     lazy_static::lazy_static! {
         static ref VIRTUAL_DISPLAY_MANAGER: Arc<Mutex<VirtualDisplayManager>> =
@@ -213,7 +250,7 @@ pub mod rustdesk_idd {
 
     #[inline]
     fn get_device_names() -> Vec<String> {
-        windows::get_device_names(Some(super::RUSTDESK_IDD_DEVICE_STRING))
+        windows::get_device_names(Some(RUSTDESK_IDD_DEVICE_STRING))
     }
 
     pub fn plug_in_headless() -> ResultType<()> {
@@ -226,7 +263,11 @@ pub mod rustdesk_idd {
         }];
         let device_names = get_device_names().into_iter().collect();
         VirtualDisplayManager::plug_in_monitor(VIRTUAL_DISPLAY_INDEX_FOR_HEADLESS, &modes)?;
-        let device_name = get_new_device_name(&device_names);
+        let device_name = get_new_device_name(
+            &device_names,
+            RUSTDESK_IDD_DEVICE_STRING,
+            MONITOR_READ_TIMEOUT,
+        );
         manager.headless_index_name = Some((VIRTUAL_DISPLAY_INDEX_FOR_HEADLESS, device_name));
         Ok(())
     }
@@ -241,26 +282,6 @@ pub mod rustdesk_idd {
         } else {
             false
         }
-    }
-
-    fn get_new_device_name(device_names: &HashSet<String>) -> String {
-        for _ in 0..3 {
-            let device_names_af: HashSet<String> = get_device_names().into_iter().collect();
-            let diff_names: Vec<_> = device_names_af.difference(&device_names).collect();
-            if diff_names.len() == 1 {
-                return diff_names[0].clone();
-            } else if diff_names.len() > 1 {
-                log::error!(
-                    "Failed to get diff device names after plugin virtual display, more than one diff names: {:?}",
-                    &diff_names
-                );
-                return "".to_string();
-            }
-            // Sleep is needed here to wait for the virtual display to be ready.
-            std::thread::sleep(std::time::Duration::from_millis(50));
-        }
-        log::error!("Failed to get diff device names after plugin virtual display",);
-        "".to_string()
     }
 
     pub fn get_virtual_displays() -> Vec<u32> {
@@ -290,7 +311,11 @@ pub mod rustdesk_idd {
             }
             match VirtualDisplayManager::plug_in_monitor(idx, modes.as_slice()) {
                 Ok(_) => {
-                    let device_name = get_new_device_name(&device_names);
+                    let device_name = get_new_device_name(
+                        &device_names,
+                        RUSTDESK_IDD_DEVICE_STRING,
+                        MONITOR_READ_TIMEOUT,
+                    );
                     manager.peer_index_name.insert(idx, device_name);
                 }
                 Err(e) => {
@@ -326,7 +351,11 @@ pub mod rustdesk_idd {
                     let device_names = get_device_names().into_iter().collect();
                     match VirtualDisplayManager::plug_in_monitor(idx, m) {
                         Ok(_) => {
-                            let device_name = get_new_device_name(&device_names);
+                            let device_name = get_new_device_name(
+                                &device_names,
+                                RUSTDESK_IDD_DEVICE_STRING,
+                                MONITOR_READ_TIMEOUT,
+                            );
                             manager.peer_index_name.insert(idx, device_name);
                             indices.push(idx);
                         }
@@ -401,14 +430,18 @@ pub mod rustdesk_idd {
 }
 
 pub mod amyuni_idd {
-    use super::windows;
+    use super::{get_new_device_name, windows, AMYUNI_IDD_DEVICE_STRING};
     use crate::platform::windows::get_amyuni_exe_name;
-    use hbb_common::{bail, lazy_static, log, ResultType};
+    use hbb_common::{allow_err, bail, config::Config, lazy_static, log, ResultType};
     use std::{
+        collections::HashSet,
         ptr::null_mut,
         sync::{Arc, Mutex},
+        time::Duration,
     };
     use winapi::um::shellapi::ShellExecuteA;
+
+    const MONITOR_READ_TIMEOUT: Duration = Duration::from_millis(3000);
 
     lazy_static::lazy_static! {
         static ref LOCK: Arc<Mutex<()>> = Default::default();
@@ -469,6 +502,39 @@ pub mod amyuni_idd {
         run_deviceinstaller("install usbmmidd.inf usbmmidd")
     }
 
+    fn get_init_resolution() -> Option<(usize, usize)> {
+        let opt = Config::get_option("amyuni_default_resolution");
+        if opt.is_empty() {
+            return None;
+        }
+        let mut parts = opt.split(',');
+        if let (Some(w), Some(h)) = (parts.next(), parts.next()) {
+            if let (Ok(w), Ok(h)) = (w.trim().parse::<usize>(), h.trim().parse::<usize>()) {
+                return Some((w, h));
+            }
+        }
+        Some((1920, 1080))
+    }
+
+    fn try_change_init_resolution(device_names: &HashSet<String>) {
+        let Some((w, h)) = get_init_resolution() else {
+            return;
+        };
+        let device_name =
+            get_new_device_name(device_names, AMYUNI_IDD_DEVICE_STRING, MONITOR_READ_TIMEOUT);
+        if device_name.is_empty() {
+            return;
+        }
+        allow_err!(crate::platform::change_resolution(&device_name, w, h));
+    }
+
+    fn plug_in_monitor_() -> ResultType<()> {
+        let device_names = get_device_names().into_iter().collect();
+        run_deviceinstaller("enableidd 1")?;
+        try_change_init_resolution(&device_names);
+        Ok(())
+    }
+
     pub fn plug_in_headless() -> ResultType<()> {
         if get_monitor_count() > 0 {
             return Ok(());
@@ -479,7 +545,7 @@ pub mod amyuni_idd {
             bail!("Failed to install driver.");
         }
 
-        run_deviceinstaller("enableidd 1")
+        plug_in_monitor_()
     }
 
     pub fn plug_in_monitor() -> ResultType<()> {
@@ -492,7 +558,7 @@ pub mod amyuni_idd {
             bail!("There are already 4 monitors plugged in.");
         }
 
-        run_deviceinstaller("enableidd 1")
+        plug_in_monitor_()
     }
 
     pub fn plug_out_monitor(index: i32) -> ResultType<()> {
@@ -534,7 +600,12 @@ pub mod amyuni_idd {
 
     #[inline]
     pub fn get_monitor_count() -> usize {
-        windows::get_device_names(Some(super::AMYUNI_IDD_DEVICE_STRING)).len()
+        get_device_names().len()
+    }
+
+    #[inline]
+    fn get_device_names() -> Vec<String> {
+        windows::get_device_names(Some(super::AMYUNI_IDD_DEVICE_STRING))
     }
 }
 
