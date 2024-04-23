@@ -2,7 +2,6 @@ use super::{PrivacyMode, PrivacyModeState, INVALID_PRIVACY_MODE_CONN_ID, NO_PHYS
 use crate::virtual_display_manager;
 use hbb_common::{allow_err, bail, config::Config, log, ResultType};
 use std::{
-    io::Error,
     ops::{Deref, DerefMut},
     thread,
     time::Duration,
@@ -15,14 +14,13 @@ use winapi::{
     },
     um::{
         wingdi::{
-            DEVMODEW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_ATTACHED_TO_DESKTOP,
-            DISPLAY_DEVICE_MIRRORING_DRIVER, DISPLAY_DEVICE_PRIMARY_DEVICE, DM_POSITION,
+            DEVMODEW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ACTIVE, DISPLAY_DEVICE_MIRRORING_DRIVER,
+            DISPLAY_DEVICE_PRIMARY_DEVICE,
         },
         winuser::{
-            ChangeDisplaySettingsExW, EnumDisplayDevicesW, EnumDisplaySettingsExW,
-            EnumDisplaySettingsW, CDS_NORESET, CDS_RESET, CDS_SET_PRIMARY, CDS_UPDATEREGISTRY,
-            DISP_CHANGE_SUCCESSFUL, EDD_GET_DEVICE_INTERFACE_NAME, ENUM_CURRENT_SETTINGS,
-            ENUM_REGISTRY_SETTINGS,
+            ChangeDisplaySettingsExW, EnumDisplayDevicesW, EnumDisplaySettingsExW, CDS_NORESET,
+            CDS_RESET, CDS_SET_PRIMARY, CDS_UPDATEREGISTRY, DISP_CHANGE_SUCCESSFUL,
+            ENUM_CURRENT_SETTINGS, ENUM_REGISTRY_SETTINGS,
         },
     },
 };
@@ -181,77 +179,42 @@ impl PrivacyModeImpl {
         }
     }
 
-    fn set_primary_display(&mut self) -> ResultType<()> {
-        let display = &self.virtual_displays[0];
-
-        #[allow(invalid_value)]
-        let mut new_primary_dm: DEVMODEW = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-        new_primary_dm.dmSize = std::mem::size_of::<DEVMODEW>() as _;
-        new_primary_dm.dmDriverExtra = 0;
-        unsafe {
-            if FALSE
-                == EnumDisplaySettingsW(
-                    display.name.as_ptr(),
-                    ENUM_CURRENT_SETTINGS,
-                    &mut new_primary_dm,
-                )
-            {
-                bail!(
-                    "Failed EnumDisplaySettingsW, device name: {:?}, error: {}",
-                    std::string::String::from_utf16(&display.name),
-                    Error::last_os_error()
-                );
-            }
-
-            let mut i: DWORD = 0;
-            loop {
-                let mut flags = CDS_UPDATEREGISTRY | CDS_NORESET;
-                #[allow(invalid_value)]
-                let mut dd: DISPLAY_DEVICEW = std::mem::MaybeUninit::uninit().assume_init();
-                dd.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as _;
-                if FALSE
-                    == EnumDisplayDevicesW(NULL as _, i, &mut dd, EDD_GET_DEVICE_INTERFACE_NAME)
-                {
-                    break;
+    fn set_virtual_display_modes(&mut self) -> ResultType<()> {
+        let display_size = self.displays.len();
+        let virtual_display_size = self.virtual_displays.len();
+        let displays_to_set = if display_size <= virtual_display_size {
+            display_size
+        } else {
+            virtual_display_size
+        };
+        let mut primary_idx = self.displays.iter().position(|d| d.primary).unwrap_or(0);
+        if primary_idx >= displays_to_set {
+            primary_idx = 0;
+        }
+        for idx in 0..displays_to_set {
+            let display_dm = &self.displays[idx].dm;
+            let mut vd_dm = self.virtual_displays[idx].dm.clone();
+            unsafe {
+                vd_dm.u1.s2_mut().dmPosition.x = display_dm.u1.s2().dmPosition.x;
+                vd_dm.u1.s2_mut().dmPosition.y = display_dm.u1.s2().dmPosition.y;
+                vd_dm.dmPelsHeight = display_dm.dmPelsHeight;
+                vd_dm.dmPelsWidth = display_dm.dmPelsWidth;
+                let flags = CDS_UPDATEREGISTRY | CDS_NORESET;
+                if idx == primary_idx {
+                    vd_dm.dmFields |= CDS_SET_PRIMARY;
                 }
-                i += 1;
-                if (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0 {
-                    continue;
-                }
-
-                if dd.DeviceName == display.name {
-                    flags |= CDS_SET_PRIMARY;
-                }
-
-                #[allow(invalid_value)]
-                let mut dm: DEVMODEW = std::mem::MaybeUninit::uninit().assume_init();
-                dm.dmSize = std::mem::size_of::<DEVMODEW>() as _;
-                dm.dmDriverExtra = 0;
-                if FALSE
-                    == EnumDisplaySettingsW(dd.DeviceName.as_ptr(), ENUM_CURRENT_SETTINGS, &mut dm)
-                {
-                    bail!(
-                        "Failed EnumDisplaySettingsW, device name: {:?}, error: {}",
-                        std::string::String::from_utf16(&dd.DeviceName),
-                        Error::last_os_error()
-                    );
-                }
-
-                dm.u1.s2_mut().dmPosition.x -= new_primary_dm.u1.s2().dmPosition.x;
-                dm.u1.s2_mut().dmPosition.y -= new_primary_dm.u1.s2().dmPosition.y;
-                dm.dmFields |= DM_POSITION;
+                let display_name = self.virtual_displays[idx].name;
                 let rc = ChangeDisplaySettingsExW(
-                    dd.DeviceName.as_ptr(),
-                    &mut dm,
+                    display_name.as_ptr(),
+                    &mut vd_dm,
                     NULL as _,
                     flags,
-                    NULL,
+                    NULL as _,
                 );
-
                 if rc != DISP_CHANGE_SUCCESSFUL {
                     log::error!(
                         "Failed ChangeDisplaySettingsEx, device name: {:?}, flags: {}, ret: {}",
-                        std::string::String::from_utf16(&dd.DeviceName),
+                        std::string::String::from_utf16(&display_name),
                         flags,
                         rc
                     );
@@ -259,7 +222,6 @@ impl PrivacyModeImpl {
                 }
             }
         }
-
         Ok(())
     }
 
@@ -302,21 +264,36 @@ impl PrivacyModeImpl {
         }]
     }
 
-    pub fn ensure_virtual_display(&mut self) -> ResultType<()> {
-        if self.virtual_displays.is_empty() {
+    pub fn plugin_virtual_displays(&mut self) -> ResultType<()> {
+        // get the number of virtual displays to plug in
+        let display_size = self.displays.len();
+        let virtual_display_size = self.virtual_displays.len();
+        if display_size <= virtual_display_size {
+            return Ok(());
+        }
+        let mut to_plugin_count = display_size - virtual_display_size;
+        if to_plugin_count > 4 {
+            to_plugin_count = 4;
+        }
+
+        // plug in virtual displays
+        let mut plug_ins = Vec::new();
+        for _ in 0..to_plugin_count {
             let displays =
                 virtual_display_manager::plug_in_peer_request(vec![Self::default_display_modes()])?;
-            if virtual_display_manager::is_amyuni_idd() {
-                thread::sleep(Duration::from_secs(3));
-            }
-            self.set_displays();
-
-            // No physical displays, no need to use the privacy mode.
-            if self.displays.is_empty() {
+            plug_ins.push(displays);
+        }
+        if virtual_display_manager::is_amyuni_idd() {
+            thread::sleep(Duration::from_secs(3));
+        }
+        self.set_displays();
+        if self.displays.is_empty() {
+            for displays in plug_ins {
                 virtual_display_manager::plug_out_monitor_indices(&displays)?;
-                bail!(NO_PHYSICAL_DISPLAYS);
             }
-
+            bail!(NO_PHYSICAL_DISPLAYS);
+        }
+        for displays in plug_ins {
             self.virtual_displays_added.extend(displays);
         }
 
@@ -392,15 +369,15 @@ impl PrivacyMode for PrivacyModeImpl {
             succeeded: false,
         };
 
-        guard.ensure_virtual_display()?;
+        guard.plugin_virtual_displays()?;
         if guard.virtual_displays.is_empty() {
             log::debug!("No virtual displays");
             bail!("No virtual displays.");
         }
 
         let reg_connectivity_1 = reg_display_settings::read_reg_connectivity()?;
-        guard.set_primary_display()?;
         guard.disable_physical_displays()?;
+        guard.set_virtual_display_modes()?;
         Self::commit_change_display(CDS_RESET)?;
         let reg_connectivity_2 = reg_display_settings::read_reg_connectivity()?;
 
