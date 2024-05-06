@@ -157,6 +157,11 @@ const kMaximizeEdgeSize = 0.0;
 var kWindowEdgeSize = isWindows ? 1.0 : 5.0;
 const kWindowBorderWidth = 1.0;
 const kDesktopMenuPadding = EdgeInsets.only(left: 12.0, right: 3.0);
+const kFrameBorderRadius = 12.0;
+const kFrameClipRRectBorderRadius = 12.0;
+const kFrameBoxShadowBlurRadius = 32.0;
+const kFrameBoxShadowOffsetFocused = 4.0;
+const kFrameBoxShadowOffsetUnfocused = 2.0;
 
 const kInvalidValueStr = 'InvalidValueStr';
 
