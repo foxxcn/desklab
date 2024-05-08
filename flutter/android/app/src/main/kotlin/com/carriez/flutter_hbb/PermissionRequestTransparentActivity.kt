@@ -7,6 +7,10 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 
+object MediaProjectionIntentHolder {
+    var intent: Intent? = null
+}
+
 class PermissionRequestTransparentActivity: Activity() {
     private val logTag = "permissionRequest"
 
@@ -19,6 +23,7 @@ class PermissionRequestTransparentActivity: Activity() {
                 val mediaProjectionManager =
                     getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                 val intent = mediaProjectionManager.createScreenCaptureIntent()
+                MediaProjectionIntentHolder.intent = intent
                 startActivityForResult(intent, REQ_REQUEST_MEDIA_PROJECTION)
             }
             else -> finish()

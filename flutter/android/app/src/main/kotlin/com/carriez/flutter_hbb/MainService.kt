@@ -292,19 +292,8 @@ class MainService : Service() {
             if (intent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
                 FFI.startService()
             }
+            // MediaProjectionIntentHolder.intent = intent
             Log.d(logTag, "service starting: ${startId}:${Thread.currentThread()}")
-            val mediaProjectionManager =
-                getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-
-            intent.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
-                mediaProjection =
-                    mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
-                checkMediaPermission()
-                _isReady = true
-            } ?: let {
-                Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
-                requestMediaProjection()
-            }
         }
         return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
     }
@@ -361,28 +350,44 @@ class MainService : Service() {
         if (isStart) {
             return true
         }
-        if (mediaProjection == null) {
-            Log.w(logTag, "startCapture fail,mediaProjection is null")
+        // if (mediaProjection == null) {
+        //     Log.w(logTag, "startCapture fail,mediaProjection is null")
+        //     return false
+        // }
+
+        MediaProjectionIntentHolder.intent?.getParcelableExtra<Intent>(EXT_MEDIA_PROJECTION_RES_INTENT)?.let {
+            val mediaProjectionManager =
+            getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            mediaProjection =
+                mediaProjectionManager.getMediaProjection(Activity.RESULT_OK, it)
+            checkMediaPermission()
+
+            updateScreenInfo(resources.configuration.orientation)
+            Log.d(logTag, "Start Capture")
+            surface = createSurface()
+    
+            if (useVP9) {
+                startVP9VideoRecorder(mediaProjection!!)
+            } else {
+                startRawVideoRecorder(mediaProjection!!)
+            }
+    
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                startAudioRecorder()
+            }
+            checkMediaPermission()
+            _isStart = true
+            FFI.setFrameRawEnable("video",true)
+            FFI.setFrameRawEnable("audio",true)
+
+            return true
+
+        } ?: let {
+            Log.d(logTag, "getParcelableExtra intent null, invoke requestMediaProjection")
+            requestMediaProjection()
+
             return false
         }
-        updateScreenInfo(resources.configuration.orientation)
-        Log.d(logTag, "Start Capture")
-        surface = createSurface()
-
-        if (useVP9) {
-            startVP9VideoRecorder(mediaProjection!!)
-        } else {
-            startRawVideoRecorder(mediaProjection!!)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            startAudioRecorder()
-        }
-        checkMediaPermission()
-        _isStart = true
-        FFI.setFrameRawEnable("video",true)
-        FFI.setFrameRawEnable("audio",true)
-        return true
     }
 
     @Synchronized
@@ -395,7 +400,7 @@ class MainService : Service() {
         virtualDisplay?.release()
         imageReader?.close()
         imageReader = null
-        // suface needs to be release after imageReader.close to imageReader access released surface
+        // surface needs to be release after imageReader.close to imageReader access released surface
         // https://github.com/rustdesk/rustdesk/issues/4118#issuecomment-1515666629
         surface?.release()
         videoEncoder?.let {
