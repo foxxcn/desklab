@@ -204,7 +204,8 @@ void changeWhiteList({Function()? callback}) async {
                       errorText: msg.isEmpty ? null : translate(msg),
                     ),
                     controller: controller,
-                    autofocus: true),
+                    enabled: !isOptFixed,
+                  ),
               ),
             ],
           ),
@@ -217,15 +218,15 @@ void changeWhiteList({Function()? callback}) async {
       ),
       actions: [
         dialogButton("Cancel", onPressed: close, isOutline: true),
-        dialogButton("Clear", onPressed: isOptFixed ? null : () async {
+        if (!isOptFixed) dialogButton("Clear", onPressed: () async {
           await bind.mainSetOption(
               key: kOptionWhitelist, value: defaultOptionWhitelist);
           callback?.call();
           close();
         }, isOutline: true),
-        dialogButton(
+        if (!isOptFixed) dialogButton(
           "OK",
-          onPressed: isOptFixed ? null : () async {
+          onPressed: () async {
             setState(() {
               msg = "";
               isInProgress = true;
