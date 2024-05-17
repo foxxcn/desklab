@@ -271,16 +271,23 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               },
       ),
       SettingsTile.switchTile(
-        title: Row(children: [
-          Expanded(child: Text(translate('Use IP Whitelisting'))),
-          Offstage(
-                  offstage: !_onlyWhiteList,
-                  child: const Icon(Icons.warning_amber_rounded,
-                      color: Color.fromARGB(255, 255, 204, 0)))
-              .marginOnly(left: 5)
-        ]),
+        title: GestureDetector(
+          child: Row(children: [
+            Expanded(child: Text(translate('Use IP Whitelisting'))),
+            Offstage(
+                    offstage: !_onlyWhiteList,
+                    child: const Icon(Icons.warning_amber_rounded,
+                        color: Color.fromARGB(255, 255, 204, 0)))
+                .marginOnly(left: 5)
+          ]),
+          onTap: isOptionFixed(kOptionWhitelist)
+              ? () => changeWhiteList(callback: null)
+              : null,
+        ),
         initialValue: _onlyWhiteList,
-        onToggle: (_) async {
+        onToggle: isOptionFixed(kOptionWhitelist)
+            ? null
+            : (_) async {
                 update() async {
                   final onlyWhiteList =
                       (await bind.mainGetOption(key: kOptionWhitelist)) !=
