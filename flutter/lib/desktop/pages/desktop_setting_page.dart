@@ -900,14 +900,14 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
     bool enabled = !locked;
     return _Card(title: 'Security', children: [
       shareRdp(context, enabled),
-      _OptionCheckBox(context, 'Deny LAN discovery', 'enable-lan-discovery',
+      _OptionCheckBox(context, 'Deny LAN discovery', kOptionEnableLanDiscovery,
           reverse: true, enabled: enabled),
       ...directIp(context),
       whitelist(),
       ...autoDisconnect(context),
       if (bind.mainIsInstalled())
         _OptionCheckBox(context, 'allow-only-conn-window-open-tip',
-            'allow-only-conn-window-open',
+            kOptionAllowOnlyConnWindowOpen,
             reverse: false, enabled: enabled),
     ]);
   }

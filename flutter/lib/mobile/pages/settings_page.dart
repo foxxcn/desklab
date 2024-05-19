@@ -93,8 +93,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
         _enableAbr = enableAbrRes;
       }
 
-      final denyLanDiscovery = !option2bool('enable-lan-discovery',
-          await bind.mainGetOption(key: 'enable-lan-discovery'));
+      final denyLanDiscovery = !option2bool(kOptionEnableLanDiscovery,
+          await bind.mainGetOption(key: kOptionEnableLanDiscovery));
       if (denyLanDiscovery != _denyLANDiscovery) {
         update = true;
         _denyLANDiscovery = denyLanDiscovery;
