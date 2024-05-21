@@ -1049,6 +1049,7 @@ impl<T: InvokeUiSession> Remote<T> {
         if let Ok(msg_in) = Message::parse_from_bytes(&data) {
             match msg_in.union {
                 Some(message::Union::VideoFrame(vf)) => {
+                    log::info!("REMOVE ME ==================================== vf: {}", vf.display);
                     if !self.first_frame {
                         self.first_frame = true;
                         self.handler.close_success();
@@ -1515,6 +1516,7 @@ impl<T: InvokeUiSession> Remote<T> {
                     _ => {}
                 },
                 Some(message::Union::TestDelay(t)) => {
+                    log::info!("REMOVE ME ==================================== test delay");
                     self.handler.handle_test_delay(t, peer).await;
                 }
                 Some(message::Union::AudioFrame(frame)) => {

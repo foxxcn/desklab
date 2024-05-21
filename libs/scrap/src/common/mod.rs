@@ -93,9 +93,9 @@ impl ImageRgb {
 #[inline]
 pub fn would_block_if_equal(old: &mut Vec<u8>, b: &[u8]) -> std::io::Result<()> {
     // does this really help?
-    if b == &old[..] {
-        return Err(std::io::ErrorKind::WouldBlock.into());
-    }
+    // if b == &old[..] {
+    //     return Err(std::io::ErrorKind::WouldBlock.into());
+    // }
     old.resize(b.len(), 0);
     old.copy_from_slice(b);
     Ok(())
