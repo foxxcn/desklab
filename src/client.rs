@@ -31,7 +31,7 @@ use hbb_common::tokio::sync::mpsc::UnboundedSender;
 use hbb_common::tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use hbb_common::{
     allow_err,
-    anyhow::{anyhow, Context},
+    anyhow::{self, Context},
     bail,
     config::{
         self, Config, LocalConfig, PeerConfig, PeerInfoSerde, Resolution, CONNECT_TIMEOUT,
@@ -870,7 +870,9 @@ impl AudioHandler {
             "Using default output device: \"{}\"",
             device.name().unwrap_or("".to_owned())
         );
-        let config = device.default_output_config().map_err(|e| anyhow!(e))?;
+        let config = device
+            .default_output_config()
+            .map_err(|e| anyhow::anyhow!(e))?;
         let sample_format = config.sample_format();
         log::info!("Default output format: {:?}", config);
         log::info!("Remote input format: {:?}", format0);

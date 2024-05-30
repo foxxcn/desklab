@@ -21,11 +21,8 @@ pub fn init() {
 }
 
 fn map_err_scrap(err: String) -> io::Error {
-    // to-do: Remove this the following log
-    log::error!(
-        "REMOVE ME ===================================== wayland scrap error {}",
-        &err
-    );
+    // to-do: Remove the following log
+    log::error!("Wayland scrap error {}", &err);
 
     // to-do: Handle error better, do not restart server
     if err.starts_with("Did not receive a reply") {
@@ -79,12 +76,11 @@ impl TraitCapturer for CapturerPtr {
 }
 
 struct CapDisplayInfo {
-    rects: Vec<((i32, i32), usize, usize)>,
-    displays: Vec<DisplayInfo>,
     num: usize,
     primary: usize,
-    current: usize,
-    capturer: CapturerPtr,
+    rects: Vec<((i32, i32), usize, usize)>,
+    displays: Vec<DisplayInfo>,
+    capturers: HashMap<usize, CapturerPtr>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -113,100 +109,76 @@ pub(super) fn is_inited() -> Option<Message> {
     }
 }
 
-fn get_max_desktop_resolution() -> Option<String> {
-    // works with Xwayland
-    let output: Output = Command::new("sh")
-        .arg("-c")
-        .arg("xrandr | awk '/current/ { print $8,$9,$10 }'")
-        .output()
-        .ok()?;
-
-    if output.status.success() {
-        let result = String::from_utf8_lossy(&output.stdout);
-        Some(result.trim().to_string())
-    } else {
-        None
-    }
-}
-
 pub(super) async fn check_init() -> ResultType<()> {
     if !is_x11() {
-        let mut minx = 0;
-        let mut maxx = 0;
-        let mut miny = 0;
-        let mut maxy = 0;
+        let mut minx = i32::MAX;
+        let mut maxx = i32::MIN;
+        let mut miny = i32::MAX;
+        let mut maxy = i32::MIN;
 
         if *CAP_DISPLAY_INFO.read().unwrap() == 0 {
             let mut lock = CAP_DISPLAY_INFO.write().unwrap();
             if *lock == 0 {
-                let mut all = Display::all()?;
+                let all = Display::all()?;
                 let num = all.len();
                 let primary = super::display_service::get_primary_2(&all);
-                let current = primary;
                 super::display_service::check_update_displays(&all);
                 let mut displays = super::display_service::get_sync_displays();
                 for display in displays.iter_mut() {
                     display.cursor_embedded = is_cursor_embedded();
                 }
-
-                let mut rects: Vec<((i32, i32), usize, usize)> = Vec::new();
-                for d in &all {
-                    rects.push((d.origin(), d.width(), d.height()));
-                }
-
-                let display = all.remove(current);
-                let (origin, width, height) = (display.origin(), display.width(), display.height());
                 log::debug!(
-                    "#displays={}, current={}, origin: {:?}, width={}, height={}, cpus={}/{}",
+                    "#displays: {}, primary: {}, cpus: {}/{}",
                     num,
-                    current,
-                    &origin,
-                    width,
-                    height,
+                    primary,
                     num_cpus::get_physical(),
                     num_cpus::get(),
                 );
 
-                let (max_width, max_height) = match get_max_desktop_resolution() {
-                    Some(result) if !result.is_empty() => {
-                        let resolution: Vec<&str> = result.split(" ").collect();
-                        let w: i32 = resolution[0].parse().unwrap_or(origin.0 + width as i32);
-                        let h: i32 = resolution[2]
-                            .trim_end_matches(",")
-                            .parse()
-                            .unwrap_or(origin.1 + height as i32);
-                        if w < origin.0 + width as i32 || h < origin.1 + height as i32 {
-                            (origin.0 + width as i32, origin.1 + height as i32)
-                        }
-                        else{
-                            (w, h)
-                        }
+                let mut rects: Vec<((i32, i32), usize, usize)> = Vec::new();
+                let mut capturers: HashMap<usize, CapturerPtr> = HashMap::new();
+                for (idx, display) in all.into_iter().enumerate() {
+                    let (origin, width, height) =
+                        (display.origin(), display.width(), display.height());
+                    log::debug!(
+                        "display: {}, origin: {:?}, width={}, height={}",
+                        idx,
+                        &origin,
+                        width,
+                        height
+                    );
+
+                    rects.push((origin, width, height));
+
+                    if minx > origin.0 {
+                        minx = origin.0;
                     }
-                    _ => (origin.0 + width as i32, origin.1 + height as i32),
-                };
+                    if maxx < origin.0 + width as i32 {
+                        maxx = origin.0 + width as i32;
+                    }
+                    if miny > origin.1 {
+                        miny = origin.1;
+                    }
+                    if maxy < origin.1 + height as i32 {
+                        maxy = origin.1 + height as i32;
+                    }
 
-                minx = 0;
-                maxx = max_width;
-                miny = 0;
-                maxy = max_height;
-
-                let capturer = Box::into_raw(Box::new(
-                    Capturer::new(display).with_context(|| "Failed to create capturer")?,
-                ));
-                let capturer = CapturerPtr(capturer);
+                    let capturer = Box::into_raw(Box::new(
+                        Capturer::new(display).with_context(|| "Failed to create capturer")?,
+                    ));
+                    capturers.insert(idx, CapturerPtr(capturer));
+                }
                 let cap_display_info = Box::into_raw(Box::new(CapDisplayInfo {
-                    rects,
-                    displays,
                     num,
                     primary,
-                    current,
-                    capturer,
+                    rects,
+                    displays,
+                    capturers,
                 }));
                 *lock = cap_display_info as _;
             }
         }
-
-        if minx != maxx && miny != maxy {
+        if minx != i32::MAX {
             log::info!(
                 "update mouse resolution: ({}, {}), ({}, {})",
                 minx,
@@ -255,14 +227,16 @@ pub fn clear() {
     if *write_lock != 0 {
         let cap_display_info: *mut CapDisplayInfo = *write_lock as _;
         unsafe {
-            let _box_capturer = Box::from_raw((*cap_display_info).capturer.0);
+            for (_, capturer) in &(*cap_display_info).capturers {
+                let _box_capturer = Box::from_raw(capturer.0);
+            }
             let _box_cap_display_info = Box::from_raw(cap_display_info);
             *write_lock = 0;
         }
     }
 }
 
-pub(super) fn get_capturer() -> ResultType<super::video_service::CapturerInfo> {
+pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::CapturerInfo> {
     if is_x11() {
         bail!("Do not call this function if not wayland");
     }
@@ -271,16 +245,22 @@ pub(super) fn get_capturer() -> ResultType<super::video_service::CapturerInfo> {
         let cap_display_info: *const CapDisplayInfo = addr as _;
         unsafe {
             let cap_display_info = &*cap_display_info;
-            let rect = cap_display_info.rects[cap_display_info.current];
+            if idx >= cap_display_info.rects.len() {
+                bail!("Invalid capturer index");
+            }
+            let rect = cap_display_info.rects[idx];
+            let Some(capturer) = cap_display_info.capturers.get(&idx) else {
+                bail!("Failed to get capturer");
+            };
             Ok(super::video_service::CapturerInfo {
                 origin: rect.0,
                 width: rect.1,
                 height: rect.2,
                 ndisplay: cap_display_info.num,
-                current: cap_display_info.current,
+                current: idx,
                 privacy_mode_id: 0,
                 _capturer_privacy_mode_id: 0,
-                capturer: Box::new(cap_display_info.capturer.clone()),
+                capturer: Box::new(capturer.clone()),
             })
         }
     } else {

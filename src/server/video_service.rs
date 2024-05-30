@@ -295,7 +295,7 @@ fn get_capturer(current: usize, portable_service_running: bool) -> ResultType<Ca
     #[cfg(target_os = "linux")]
     {
         if !is_x11() {
-            return super::wayland::get_capturer();
+            return super::wayland::get_capturer(current);
         }
     }
 
