@@ -35,6 +35,8 @@ use crate::{
     privacy_mode::{is_current_privacy_mode_impl, PRIVACY_MODE_IMPL_WIN_MAG},
     ui_interface::is_installed,
 };
+#[cfg(target_os = "linux")]
+use hbb_common::config;
 use hbb_common::{
     anyhow::anyhow,
     tokio::sync::{
@@ -295,7 +297,7 @@ fn get_capturer(current: usize, portable_service_running: bool) -> ResultType<Ca
     #[cfg(target_os = "linux")]
     {
         if !is_x11() {
-            return super::wayland::get_capturer();
+            return super::wayland::get_capturer(current);
         }
     }
 
@@ -383,20 +385,20 @@ fn get_capturer(current: usize, portable_service_running: bool) -> ResultType<Ca
 
 fn run(vs: VideoService) -> ResultType<()> {
     let _raii = Raii::new(vs.idx);
-    // Wayland only support one video capturer for now. It is ok to call ensure_inited() here.
-    //
-    // ensure_inited() is needed because clear() may be called.
-    // to-do: wayland ensure_inited should pass current display index.
-    // But for now, we do not support multi-screen capture on wayland.
     #[cfg(target_os = "linux")]
     super::wayland::ensure_inited()?;
     #[cfg(target_os = "linux")]
-    let _wayland_call_on_ret = SimpleCallOnReturn {
-        b: true,
-        f: Box::new(|| {
-            super::wayland::clear();
-        }),
-    };
+    let _wayland_call_on_ret =
+        if !config::LocalConfig::get_option(config::keys::RESTORE_TOKEN_CONF_KEY).is_empty() {
+            Some(SimpleCallOnReturn {
+                b: true,
+                f: Box::new(|| {
+                    super::wayland::clear();
+                }),
+            })
+        } else {
+            None
+        };
 
     #[cfg(windows)]
     let last_portable_service_running = crate::portable_service::client::running();

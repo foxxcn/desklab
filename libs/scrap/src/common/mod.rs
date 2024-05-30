@@ -24,6 +24,7 @@ cfg_if! {
                 pub use self::x11::*;
             }
         }
+        pub use wayland::Display as WaylandDisplay;
     } else if #[cfg(dxgi)] {
         mod dxgi;
         pub use self::dxgi::*;

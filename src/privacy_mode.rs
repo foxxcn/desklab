@@ -6,12 +6,9 @@ use crate::{
     display_service,
     ipc::{connect, Data},
 };
-use hbb_common::{
-    anyhow::anyhow,
-    bail, lazy_static,
-    tokio::{self, sync::oneshot},
-    ResultType,
-};
+#[cfg(windows)]
+use hbb_common::tokio;
+use hbb_common::{anyhow::anyhow, bail, lazy_static, tokio::sync::oneshot, ResultType};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     collections::HashMap,

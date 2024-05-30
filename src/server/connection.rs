@@ -2666,7 +2666,10 @@ impl Connection {
                     {
                         return;
                     }
+                    #[cfg(windows)]
                     let mut record_changed = true;
+                    #[cfg(not(windows))]
+                    let record_changed = true;
                     #[cfg(windows)]
                     if virtual_display_manager::amyuni_idd::is_my_display(&name) {
                         record_changed = false;
@@ -3708,6 +3711,7 @@ mod raii {
                 .send((conn_count, remote_count)));
         }
 
+        #[cfg(windows)]
         pub fn remote_and_file_conn_count() -> usize {
             AUTHED_CONNS
                 .lock()

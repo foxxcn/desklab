@@ -486,7 +486,6 @@ fn streams_from_response(response: OrgFreedesktopPortalRequestResponse) -> Vec<P
 
 static mut INIT: bool = false;
 const RESTORE_TOKEN: &str = "restore_token";
-const RESTORE_TOKEN_CONF_KEY: &str = "wayland-restore-token";
 
 pub fn get_available_cursor_modes() -> Result<u32, dbus::Error> {
     let conn = SyncConnection::new_session()?;
@@ -634,7 +633,8 @@ fn on_create_session_response(
         // See `is_server_running()` to understand the following code.
         if is_server_running() {
             if is_support_restore_token {
-                let restore_token = config::LocalConfig::get_option(RESTORE_TOKEN_CONF_KEY);
+                let restore_token =
+                    config::LocalConfig::get_option(config::keys::RESTORE_TOKEN_CONF_KEY);
                 if !restore_token.is_empty() {
                     args.insert(RESTORE_TOKEN.to_string(), Variant(Box::new(restore_token)));
                 }
@@ -787,7 +787,7 @@ fn on_start_response(
                 if let Some(restore_token) = r.results.get(RESTORE_TOKEN) {
                     if let Some(restore_token) = restore_token.as_str() {
                         config::LocalConfig::set_option(
-                            RESTORE_TOKEN_CONF_KEY.to_owned(),
+                            config::keys::RESTORE_TOKEN_CONF_KEY.to_owned(),
                             restore_token.to_owned(),
                         );
                     }
