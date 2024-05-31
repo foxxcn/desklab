@@ -12,7 +12,8 @@ use crate::{
 };
 
 lazy_static::lazy_static! {
-    static ref CAP_DISPLAY_INFO: RwLock<u64> = RwLock::new(0);
+    // Up to 24 video services
+    static ref CAPTURES: [RwLock<u64>; 24] = [RwLock::new(0); 24]
     static ref LOG_SCRAP_COUNT: Mutex<u32> = Mutex::new(0);
 }
 
@@ -75,135 +76,119 @@ impl TraitCapturer for CapturerPtr {
     }
 }
 
-struct CapDisplayInfo {
-    num: usize,
-    primary: usize,
-    rects: Vec<((i32, i32), usize, usize)>,
-    displays: Vec<DisplayInfo>,
-    capturers: HashMap<usize, CapturerPtr>,
-}
-
 #[tokio::main(flavor = "current_thread")]
-pub(super) async fn ensure_inited() -> ResultType<()> {
-    check_init().await
+pub(super) async fn ensure_inited(idx: usize) -> ResultType<()> {
+    if is_x11() {
+        return Ok(());
+    }
+    if CAPTURES.len() <= idx {
+        bail!("Invalid capturer index: {}", idx);
+    }
+
+    let Some(addr) = CAPTURES.get(idx) else {
+        bail!("Failed to get capturer");
+    };
+
+    let mut minx = i32::MAX;
+    let mut maxx = i32::MIN;
+    let mut miny = i32::MAX;
+    let mut maxy = i32::MIN;
+
+    if *addr.read().unwrap() == 0 {
+        let mut lock = addr.write().unwrap();
+        if *lock == 0 {
+            let all = Display::all()?;
+            super::display_service::check_update_displays(&all);
+            let mut capturers: HashMap<usize, CapturerPtr> = HashMap::new();
+            for (i, display) in all.into_iter().enumerate() {
+                let (origin, width, height) = (display.origin(), display.width(), display.height());
+                if minx > origin.0 {
+                    minx = origin.0;
+                }
+                if maxx < origin.0 + width as i32 {
+                    maxx = origin.0 + width as i32;
+                }
+                if miny > origin.1 {
+                    miny = origin.1;
+                }
+                if maxy < origin.1 + height as i32 {
+                    maxy = origin.1 + height as i32;
+                }
+
+                if idx == i {
+                    log::debug!(
+                        "display: {}, origin: {:?}, width={}, height={}",
+                        i,
+                        &origin,
+                        width,
+                        height
+                    );
+                    let capturer = Box::into_raw(Box::new(
+                        Capturer::new(display).with_context(|| "Failed to create capturer")?,
+                    ));
+                    *lock = capturer as _;
+                }
+            }
+        }
+    }
+    if minx != i32::MAX {
+        log::info!(
+            "update mouse resolution: ({}, {}), ({}, {})",
+            minx,
+            maxx,
+            miny,
+            maxy
+        );
+        allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
+    }
+    Ok(())
 }
 
 pub(super) fn is_inited() -> Option<Message> {
     if is_x11() {
         None
     } else {
-        if *CAP_DISPLAY_INFO.read().unwrap() == 0 {
-            let mut msg_out = Message::new();
-            let res = MessageBox {
-                msgtype: "nook-nocancel-hasclose".to_owned(),
-                title: "Wayland".to_owned(),
-                text: "Please Select the screen to be shared(Operate on the peer side).".to_owned(),
-                link: "".to_owned(),
-                ..Default::default()
-            };
-            msg_out.set_message_box(res);
-            Some(msg_out)
-        } else {
-            None
-        }
-    }
-}
-
-pub(super) async fn check_init() -> ResultType<()> {
-    if !is_x11() {
-        let mut minx = i32::MAX;
-        let mut maxx = i32::MIN;
-        let mut miny = i32::MAX;
-        let mut maxy = i32::MIN;
-
-        if *CAP_DISPLAY_INFO.read().unwrap() == 0 {
-            let mut lock = CAP_DISPLAY_INFO.write().unwrap();
-            if *lock == 0 {
-                let all = Display::all()?;
-                let num = all.len();
-                let primary = super::display_service::get_primary_2(&all);
-                super::display_service::check_update_displays(&all);
-                let mut displays = super::display_service::get_sync_displays();
-                for display in displays.iter_mut() {
-                    display.cursor_embedded = is_cursor_embedded();
-                }
-                log::debug!(
-                    "#displays: {}, primary: {}, cpus: {}/{}",
-                    num,
-                    primary,
-                    num_cpus::get_physical(),
-                    num_cpus::get(),
-                );
-
-                let mut rects: Vec<((i32, i32), usize, usize)> = Vec::new();
-                let mut capturers: HashMap<usize, CapturerPtr> = HashMap::new();
-                for (idx, display) in all.into_iter().enumerate() {
-                    let (origin, width, height) =
-                        (display.origin(), display.width(), display.height());
-                    log::debug!(
-                        "display: {}, origin: {:?}, width={}, height={}",
-                        idx,
-                        &origin,
-                        width,
-                        height
-                    );
-
-                    rects.push((origin, width, height));
-
-                    if minx > origin.0 {
-                        minx = origin.0;
-                    }
-                    if maxx < origin.0 + width as i32 {
-                        maxx = origin.0 + width as i32;
-                    }
-                    if miny > origin.1 {
-                        miny = origin.1;
-                    }
-                    if maxy < origin.1 + height as i32 {
-                        maxy = origin.1 + height as i32;
-                    }
-
-                    let capturer = Box::into_raw(Box::new(
-                        Capturer::new(display).with_context(|| "Failed to create capturer")?,
-                    ));
-                    capturers.insert(idx, CapturerPtr(capturer));
-                }
-                let cap_display_info = Box::into_raw(Box::new(CapDisplayInfo {
-                    num,
-                    primary,
-                    rects,
-                    displays,
-                    capturers,
-                }));
-                *lock = cap_display_info as _;
+        for addr in CAPTURES.iter() {
+            if *addr.read().unwrap() != 0 {
+                return None;
             }
         }
-        if minx != i32::MAX {
-            log::info!(
-                "update mouse resolution: ({}, {}), ({}, {})",
-                minx,
-                maxx,
-                miny,
-                maxy
-            );
-            allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
-        }
+
+        let mut msg_out = Message::new();
+        let res = MessageBox {
+            msgtype: "nook-nocancel-hasclose".to_owned(),
+            title: "Wayland".to_owned(),
+            text: "Please Select the screen to be shared(Operate on the peer side).".to_owned(),
+            link: "".to_owned(),
+            ..Default::default()
+        };
+        msg_out.set_message_box(res);
+        Some(msg_out)
     }
-    Ok(())
 }
 
+#[inline]
 pub(super) async fn get_displays() -> ResultType<Vec<DisplayInfo>> {
-    check_init().await?;
-    let addr = *CAP_DISPLAY_INFO.read().unwrap();
-    if addr != 0 {
-        let cap_display_info: *const CapDisplayInfo = addr as _;
-        unsafe {
-            let cap_display_info = &*cap_display_info;
-            Ok(cap_display_info.displays.clone())
-        }
-    } else {
-        bail!("Failed to get capturer display info");
+    if is_x11() {
+        return Ok(Vec::new());
     }
+
+    let all = Display::all()?;
+    super::display_service::check_update_displays(&all);
+    let mut displays = super::display_service::get_sync_displays();
+    for display in displays.iter_mut() {
+        display.cursor_embedded = is_cursor_embedded();
+    }
+    let num = all.len();
+    let primary = super::display_service::get_primary_2(&all);
+    log::debug!(
+        "#displays: {}, primary: {}, cpus: {}/{}",
+        num,
+        primary,
+        num_cpus::get_physical(),
+        num_cpus::get(),
+    );
+    Ok(displays)
 }
 
 pub(super) fn get_primary() -> ResultType<usize> {
