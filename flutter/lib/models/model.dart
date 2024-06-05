@@ -2393,6 +2393,8 @@ class FFI {
       cursorModel.peerId = id;
     }
 
+    Log.info("REMOVE ME ============= ffi start $id, connType $connType, tabWindowId $tabWindowId, display $display, displays $displays");
+
     // If tabWindowId != null, this session is a "tab -> window" one.
     // Else this session is a new one.
     if (tabWindowId == null) {
@@ -2424,9 +2426,14 @@ class FFI {
           sessionId: sessionId, displays: Int32List.fromList(displays));
       ffiModel.pi.currentDisplay = display;
     }
+    Log.info("REMOVE ME ============= ffi start add session end");
+
     if (isDesktop && connType == ConnType.defaultConn) {
       textureModel.updateCurrentDisplay(display ?? 0);
     }
+
+Log.info("REMOVE ME ============= ffi start, sessionStart begin");
+
     final stream = bind.sessionStart(sessionId: sessionId, id: id);
     if (isWeb) {
       platformFFI.setRgbaCallback((int display, Uint8List data) {
@@ -2435,6 +2442,8 @@ class FFI {
       });
       return;
     }
+
+    Log.info("REMOVE ME ============= ffi start, sessionStart end");
 
     final cb = ffiModel.startEventListener(sessionId, id);
 
@@ -2449,8 +2458,13 @@ class FFI {
     imageModel.updateUserTextureRender();
     final hasGpuTextureRender = bind.mainHasGpuTextureRender();
     final SimpleWrapper<bool> isToNewWindowNotified = SimpleWrapper(false);
+
+    Log.info("REMOVE ME ============= ffi start, register listen begin");
+
     // Preserved for the rgba data.
     stream.listen((message) {
+      Log.info("REMOVE ME ============= ffi stream event");
+
       if (closed) return;
       if (tabWindowId != null && !isToNewWindowNotified.value) {
         // Session is read to be moved to a new window.
@@ -2522,6 +2536,7 @@ class FFI {
         }
       }();
     });
+    Log.info("REMOVE ME ============= ffi start, register listen end");
     // every instance will bind a stream
     this.id = id;
   }

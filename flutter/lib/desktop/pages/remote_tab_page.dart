@@ -54,6 +54,8 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
   var connectionMap = RxList<Widget>.empty(growable: true);
 
   _ConnectionTabPageState(Map<String, dynamic> params) {
+    Log.info("REMOVE ME ============= _ConnectionTabPageState constructor");
+
     _toolbarState = ToolbarState();
     RemoteCountState.init();
     peerId = params['id'];
@@ -65,6 +67,9 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
     _isScreenRectSet = screenRect != null;
     _display = display as int?;
     tryMoveToScreenAndSetFullscreen(screenRect);
+
+    Log.info("REMOVE ME ============= _ConnectionTabPageState constructor parse params done");
+
     if (peerId != null) {
       ConnectionTypeState.init(peerId!);
       tabController.onSelected = (id) {
@@ -77,6 +82,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
             .setTitle(getWindowNameWithId(id));
         UnreadChatCountState.find(id).value = 0;
       };
+      Log.info("REMOVE ME ============= _ConnectionTabPageState constructor add tab info begin");
       tabController.add(TabInfo(
         key: peerId!,
         label: peerId!,
@@ -98,7 +104,9 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           isSharedPassword: params['isSharedPassword'],
         ),
       ));
+      Log.info("REMOVE ME ============= _ConnectionTabPageState constructor add tab info end");
       _update_remote_count();
+      Log.info("REMOVE ME ============= _ConnectionTabPageState constructor update remote count done");
     }
   }
 
@@ -131,6 +139,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= _ConnectionTabPageState build");
     final child = Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: DesktopTab(

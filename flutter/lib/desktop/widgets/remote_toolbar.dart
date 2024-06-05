@@ -418,6 +418,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= _RemoteToolbarState build");
     // No need to use future builder here.
     return Align(
       alignment: Alignment.topCenter,

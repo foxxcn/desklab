@@ -1008,7 +1008,8 @@ class CustomAlertDialog extends StatelessWidget {
           return KeyEventResult.handled; // avoid TextField exception on escape
         } else if (!tabTapped &&
             onSubmit != null &&
-            (key.logicalKey == LogicalKeyboardKey.enter || key.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+            (key.logicalKey == LogicalKeyboardKey.enter ||
+                key.logicalKey == LogicalKeyboardKey.numpadEnter)) {
           if (key is RawKeyDownEvent) onSubmit?.call();
           return KeyEventResult.handled;
         } else if (key.logicalKey == LogicalKeyboardKey.tab) {
@@ -1815,6 +1816,8 @@ Future<bool> restoreWindowPosition(WindowType type,
   }
   pos ??= bind.getLocalFlutterOption(k: windowFramePrefix + type.name);
 
+  Log.info("REMOVE ME ============= restoreWindowPosition get pos");
+
   var lpos = LastWindowPosition.loadFromString(pos);
   if (lpos == null) {
     debugPrint("no window position saved, ignoring position restoration");
@@ -1848,6 +1851,8 @@ Future<bool> restoreWindowPosition(WindowType type,
   );
   debugPrint(
       "restore lpos: ${size.width}/${size.height}, offset:${offsetDevicePixelRatio?.offset.dx}/${offsetDevicePixelRatio?.offset.dy}, devicePixelRatio:${offsetDevicePixelRatio?.devicePixelRatio}, isMaximized: ${lpos.isMaximized}, isFullscreen: ${lpos.isFullscreen}");
+
+  Log.info("REMOVE ME ============= restoreWindowPosition restore pos");
 
   switch (type) {
     case WindowType.Main:
@@ -1894,6 +1899,7 @@ Future<bool> restoreWindowPosition(WindowType type,
         }
         await restorePos();
       }
+      Log.info("REMOVE ME ============= restoreWindowPosition restore pos end");
       return true;
     default:
       final wc = WindowController.fromWindowId(windowId!);
@@ -2034,6 +2040,11 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
         i++;
         break;
       case '--file-transfer':
+        // ignore disconnect
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.disconnect();
+        });
+        return true;
         type = UriLinkType.fileTransfer;
         id = args[i + 1];
         i++;
@@ -2059,6 +2070,12 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
       case '--relay':
         forceRelay = true;
         break;
+      case '--disconnect':
+        // ignore disconnect
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.disconnect();
+        });
+        return true;
       default:
         break;
     }
@@ -2102,7 +2119,14 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
 List<String>? urlLinkToCmdArgs(Uri uri) {
   String? command;
   String? id;
-  final options = ["connect", "play", "file-transfer", "port-forward", "rdp"];
+  final options = [
+    "disconnect",
+    "connect",
+    "play",
+    "file-transfer",
+    "port-forward",
+    "rdp"
+  ];
   if (uri.authority.isEmpty &&
       uri.path.split('').every((char) => char == '/')) {
     return [];
@@ -2181,6 +2205,7 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
     String? switch_uuid = param["switch_uuid"];
     if (switch_uuid != null) args.addAll(['--switch_uuid', switch_uuid]);
     if (param["relay"] != null) args.add("--relay");
+    if (param["disconnect"] != null) args.add("--disconnect");
     return args;
   }
 
@@ -3372,3 +3397,57 @@ get defaultOptionNo => isCustomClient ? 'N' : '';
 get defaultOptionWhitelist => isCustomClient ? ',' : '';
 get defaultOptionAccessMode => isCustomClient ? 'custom' : '';
 get defaultOptionApproveMode => isCustomClient ? 'password-click' : '';
+
+class Log {
+  static info(String message, [StackTrace? stackTrace]) async {
+    await log('INFO', message, stackTrace);
+  }
+
+  static error(String message, [StackTrace? stackTrace]) async {
+    await log('ERROR', message, stackTrace);
+  }
+
+  static warning(String message, [StackTrace? stackTrace]) async {
+    await log('WARNING', message, stackTrace);
+  }
+
+  static log(String type, String message, [StackTrace? stackTrace]) async {
+    assert(() {
+      DateTime today = DateTime.now();
+      String dateSlug =
+          "${today.year.toString()}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')} ${today.hour.toString().padLeft(2, '0')}:${today.minute.toString().padLeft(2, '0')}:${today.second.toString().padLeft(2, '0')}";
+      if (stackTrace != null) {
+        CustomTrace customTrace = CustomTrace(stackTrace);
+        print(
+            '[$type] $dateSlug ${customTrace.fileName}:(${customTrace.lineNumber}) - $message');
+      } else {
+        print('[$type] $dateSlug $message');
+      }
+      return true;
+    }());
+  }
+}
+
+class CustomTrace {
+  final StackTrace _trace;
+
+  String fileName = '';
+  int lineNumber = 0;
+  int columnNumber = 0;
+
+  CustomTrace(this._trace) {
+    _parseTrace();
+  }
+
+  void _parseTrace() {
+    var traceString = _trace.toString().split("\n")[0];
+    var indexOfFileName = traceString.indexOf(RegExp(r'[A-Za-z_/]+.dart'));
+    var fileInfo = traceString.substring(indexOfFileName);
+    var listOfInfos = fileInfo.split(":");
+    fileName = listOfInfos[0];
+    lineNumber = int.parse(listOfInfos[1]);
+    var columnStr = listOfInfos[2];
+    columnStr = columnStr.replaceFirst(")", "");
+    columnNumber = int.parse(columnStr);
+  }
+}

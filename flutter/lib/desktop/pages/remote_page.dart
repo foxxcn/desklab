@@ -101,14 +101,23 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   void initState() {
+    Log.info("REMOVE ME ============= _RemotePageState constructor");
+
     super.initState();
     _initStates(widget.id);
+
+    Log.info("REMOVE ME ============= _RemotePageState constructor, create ffi begin");
+
     _ffi = FFI(widget.sessionId);
+
+    Log.info("REMOVE ME ============= _RemotePageState constructor, create ffi end");
+
     Get.put(_ffi, tag: widget.id);
     _ffi.imageModel.addCallbackOnFirstImage((String peerId) {
       showKBLayoutTypeChooserIfNeeded(
           _ffi.ffiModel.pi.platform, _ffi.dialogManager);
     });
+    Log.info("REMOVE ME ============= _RemotePageState constructor, ffi start begin");
     _ffi.start(
       widget.id,
       password: widget.password,
@@ -119,6 +128,7 @@ class _RemotePageState extends State<RemotePage>
       display: widget.display,
       displays: widget.displays,
     );
+    Log.info("REMOVE ME ============= _RemotePageState constructor, ffi start end");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
       _ffi.dialogManager
@@ -136,6 +146,9 @@ class _RemotePageState extends State<RemotePage>
         sessionId: sessionId, arg: 'show-remote-cursor');
     _zoomCursor.value = bind.sessionGetToggleOptionSync(
         sessionId: sessionId, arg: kOptionZoomCursor);
+
+  Log.info("REMOVE ME ============= _RemotePageState constructor, apply configs done");
+
     DesktopMultiWindow.addListener(this);
     // if (!_isCustomCursorInited) {
     //   customCursorController.registerNeedUpdateCursorCallback(
@@ -150,7 +163,12 @@ class _RemotePageState extends State<RemotePage>
     // }
 
     _blockableOverlayState.applyFfi(_ffi);
+
+    Log.info("REMOVE ME ============= _RemotePageState constructor, apply ffi done");
+
     widget.tabController?.onSelected?.call(widget.id);
+
+    Log.info("REMOVE ME ============= _RemotePageState constructor, tab controller, onSelected done");
   }
 
   @override
@@ -377,6 +395,7 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= _RemotePageState build");
     super.build(context);
     return WillPopScope(
         onWillPop: () async {
@@ -471,6 +490,7 @@ class _RemotePageState extends State<RemotePage>
   }
 
   Widget getBodyForDesktop(BuildContext context) {
+    Log.info("REMOVE ME ============= getBodyForDesktop begin");
     var paints = <Widget>[
       MouseRegion(onEnter: (evt) {
         if (!isWeb) bind.hostStopSystemKeyPropagate(stopped: false);

@@ -56,6 +56,7 @@ pub fn core_main() -> Option<Vec<String>> {
             #[cfg(feature = "flutter")]
             if [
                 "--connect",
+                "--disconnect",
                 "--play",
                 "--file-transfer",
                 "--port-forward",
@@ -531,6 +532,9 @@ fn core_main_invoke_new_connection(mut args: std::env::Args) -> Option<Vec<Strin
                 if let Some(switch_uuid) = args.next() {
                     param_array.push(format!("switch_uuid={switch_uuid}"));
                 }
+            }
+            "--disconnect" => {
+                param_array.push(format!("disconnect=true"));
             }
             _ => {}
         }

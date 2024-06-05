@@ -16,6 +16,7 @@ class DesktopRemoteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= DesktopRemoteScreen build");
     return MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: gFFI.ffiModel),

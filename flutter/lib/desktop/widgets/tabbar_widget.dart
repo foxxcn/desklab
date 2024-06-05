@@ -291,6 +291,7 @@ class DesktopTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= DesktopTab build");
     return Column(children: [
       Obx(() => Offstage(
           offstage: !stateGlobal.showTabBar.isTrue ||
@@ -926,6 +927,7 @@ class _ListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= _ListView build");
     return Obx(() => ListView(
         controller: state.value.scrollController,
         scrollDirection: Axis.horizontal,
@@ -934,6 +936,8 @@ class _ListView extends StatelessWidget {
         children: isHideSingleItem()
             ? List.empty()
             : state.value.tabs.asMap().entries.map((e) {
+              Log.info("REMOVE ME ============= _ListView tab entry build");
+
                 final index = e.key;
                 final tab = e.value;
                 final label = labelGetter == null
@@ -1099,6 +1103,7 @@ class _TabState extends State<_Tab> with RestorationMixin {
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= _TabState build");
     bool isSelected = widget.index == widget.selected;
     bool showDivider =
         widget.index != widget.selected - 1 && widget.index != widget.selected;

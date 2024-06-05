@@ -117,6 +117,7 @@ pub fn start(args: &mut [String]) {
         });
         page = "cm.html";
     } else if (args[0] == "--connect"
+        || args[0] == "--disconnect"
         || args[0] == "--file-transfer"
         || args[0] == "--port-forward"
         || args[0] == "--rdp")

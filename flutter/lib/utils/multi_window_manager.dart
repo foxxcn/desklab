@@ -232,6 +232,14 @@ class RustDeskMultiWindowManager {
     return _newSession(openInTabs, type, methodName, remoteId, windows, msg);
   }
 
+  disconnect() async {
+    Log.info(
+        'REMOVE ME ========================= new session', StackTrace.current);
+    for (final windowId in _remoteDesktopWindows) {
+      WindowController.fromWindowId(windowId).close();
+    }
+  }
+
   Future<MultiWindowCallResult> newRemoteDesktop(
     String remoteId, {
     String? password,
@@ -239,6 +247,8 @@ class RustDeskMultiWindowManager {
     String? switchUuid,
     bool? forceRelay,
   }) async {
+    Log.info(
+        'REMOVE ME ========================= new session', StackTrace.current);
     return await newSession(
       WindowType.RemoteDesktop,
       kWindowEventNewRemoteDesktop,

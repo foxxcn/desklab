@@ -82,6 +82,7 @@ class _RawTouchGestureDetectorRegionState
 
   @override
   Widget build(BuildContext context) {
+    Log.info("REMOVE ME ============= _RawTouchGestureDetectorRegionState build");
     return RawGestureDetector(
       child: widget.child,
       gestures: makeGestures(context),

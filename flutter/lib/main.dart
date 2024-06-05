@@ -37,7 +37,7 @@ late List<String> kBootArgs;
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  debugPrint("launch args: $args");
+  Log.info("REMOVE ME ============= launch args: $args");
   kBootArgs = List.from(args);
 
   if (!isDesktop) {
@@ -165,6 +165,7 @@ void runMultiWindow(
   String appType,
 ) async {
   await initEnv(appType);
+  Log.info("REMOVE ME ============= initEnv done");
   final title = getWindowName();
   // set prevent close to true, we handle close event manually
   WindowController.fromWindowId(kWindowId!).setPreventClose(true);
@@ -172,9 +173,11 @@ void runMultiWindow(
   late Widget widget;
   switch (appType) {
     case kAppTypeDesktopRemote:
+      Log.info("REMOVE ME ============= DesktopRemoteScreen create begin");
       widget = DesktopRemoteScreen(
         params: argument,
       );
+      Log.info("REMOVE ME ============= DesktopRemoteScreen create end");
       break;
     case kAppTypeDesktopFileTransfer:
       widget = DesktopFileTransferScreen(
@@ -195,6 +198,7 @@ void runMultiWindow(
     widget,
     MyTheme.currentThemeMode(),
   );
+  Log.info("REMOVE ME ============= _runApp called");
   // we do not hide titlebar on win7 because of the frame overflow.
   if (kUseCompatibleUiMode) {
     WindowController.fromWindowId(kWindowId!).showTitleBar(true);
@@ -204,12 +208,14 @@ void runMultiWindow(
       // If screen rect is set, the window will be moved to the target screen and then set fullscreen.
       if (argument['screen_rect'] == null) {
         // display can be used to control the offset of the window.
+        Log.info("REMOVE ME ============= restoreWindowPosition begin");
         await restoreWindowPosition(
           WindowType.RemoteDesktop,
           windowId: kWindowId!,
           peerId: argument['id'] as String?,
           display: argument['display'] as int?,
         );
+        Log.info("REMOVE ME ============= restoreWindowPosition end");
       }
       break;
     case kAppTypeDesktopFileTransfer:
@@ -224,7 +230,9 @@ void runMultiWindow(
       exit(0);
   }
   // show window from hidden status
+  Log.info("REMOVE ME ============= sub window show begin");
   WindowController.fromWindowId(kWindowId!).show();
+  Log.info("REMOVE ME ============= sub window show end");
 }
 
 void runConnectionManagerScreen() async {
