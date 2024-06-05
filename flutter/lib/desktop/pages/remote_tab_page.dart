@@ -424,19 +424,27 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
       final display = args['display'];
       final displays = args['displays'];
       final screenRect = parseParamScreenRect(args);
+      Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop parse args done");
       Future.delayed(Duration.zero, () async {
         if (stateGlobal.fullscreen.isTrue) {
           await WindowController.fromWindowId(windowId()).setFullscreen(false);
           stateGlobal.setFullscreen(false, procWnd: false);
         }
+        Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop set frame begin");
         await setNewConnectWindowFrame(windowId(), id!, screenRect);
+        Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop set frame end");
         Future.delayed(Duration(milliseconds: isWindows ? 100 : 0), () async {
+          Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop window on top begin");
           await windowOnTop(windowId());
+          Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop window on top end");
         });
       });
+      Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop init state begin");
       ConnectionTypeState.init(id);
       _toolbarState.setShow(
           bind.mainGetUserDefaultOption(key: kOptionCollapseToolbar) != 'Y');
+      Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop init state end");
+      Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop add tab begin");
       tabController.add(TabInfo(
         key: id,
         label: id,
@@ -458,6 +466,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           isSharedPassword: args['isSharedPassword'],
         ),
       ));
+      Log.info("REMOVE ME ============= kWindowEventNewRemoteDesktop add tab end");
     } else if (call.method == kWindowDisableGrabKeyboard) {
       // ???
     } else if (call.method == "onDestroy") {
