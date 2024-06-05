@@ -2,11 +2,13 @@
 
 # 20240605173702 - 3
 
+# grep '_RemotePageState constructor, create ffi begin' * | awk -F ':' '{print $1}' | sort | uniq -c
+
 mkdir logs
 
 sleep_main=5
 sleep_conn=60
-peer_id=1997116099
+peer_id=505256207
 
 while true
 do
@@ -17,8 +19,6 @@ do
   nohup ./RustDesk > "logs/log_$current_time.txt" & 2>&1
 
   sleep $sleep_main
-
-  ./RustDesk --connect $peer_id
 
   for i in {1..5}; do
     echo "Test connection $i"

@@ -487,13 +487,13 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
     } else if (call.method == kWindowActionRebuild) {
       reloadCurrentWindow();
     } else if (call.method == kWindowEventActiveSession) {
-      closeConnection(id: call.arguments);
-    } else if (call.method == kWindowEventDisconnSession) {
       final jumpOk = tabController.jumpToByKey(call.arguments);
       if (jumpOk) {
         windowOnTop(windowId());
       }
       return jumpOk;
+    } else if (call.method == kWindowEventDisconnSession) {
+      closeConnection(id: call.arguments);
     } else if (call.method == kWindowEventActiveDisplaySession) {
       final args = jsonDecode(call.arguments);
       final id = args['id'];
