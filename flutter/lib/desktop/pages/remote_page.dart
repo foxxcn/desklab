@@ -64,8 +64,11 @@ class RemotePage extends StatefulWidget {
 
   @override
   State<RemotePage> createState() {
+    Log.info("REMOVE ME ============= RemotePage createState create begin");
     final state = _RemotePageState();
+    Log.info("REMOVE ME ============= RemotePage createState create end");
     _lastState.value = state;
+    Log.info("REMOVE ME ============= RemotePage createState set last state done");
     return state;
   }
 }
