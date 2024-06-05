@@ -4,7 +4,7 @@ use std::os::unix::io::AsRawFd;
 use std::process::Command;
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use std::time::Duration;
-use tracing::{debug, trace, warn};
+use tracing::{debug, trace, warn, info};
 
 use dbus::{
     arg::{OwnedFd, PropMap, RefArg, Variant},
@@ -232,7 +232,14 @@ impl PipeWireRecorder {
         ));
         appsink.set_caps(Some(&caps));
 
-        pipeline.set_state(gst::State::Playing)?;
+        println!("REMOVE ME ============================= PipeWireRecorder playing, fd: {}, path: {} ", capturable.fd.as_raw_fd(), capturable.path);
+        let x = pipeline.set_state(gst::State::Playing);
+        if x.is_ok() {
+            println!("REMOVE ME ============================= PipeWireRecorder playing ok , fd: {}, path: {} ", capturable.fd.as_raw_fd(), capturable.path);
+        } else {
+            println!("REMOVE ME ============================= PipeWireRecorder playing failed , fd: {}, path: {} ", capturable.fd.as_raw_fd(), capturable.path);
+        }
+        let _x = x?;
         Ok(Self {
             pipeline,
             appsink,
@@ -348,6 +355,7 @@ impl Recorder for PipeWireRecorder {
 
 impl Drop for PipeWireRecorder {
     fn drop(&mut self) {
+        println!("REMOVE ME ============================= PipeWireRecorder drop ");
         if let Err(err) = self.pipeline.set_state(gst::State::Null) {
             warn!("Failed to stop GStreamer pipeline: {}.", err);
         }

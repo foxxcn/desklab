@@ -64,9 +64,11 @@ fn try_log(err: &String) {
 
 struct CapturerPtr(*mut Capturer);
 
-impl Clone for CapturerPtr {
-    fn clone(&self) -> Self {
-        Self(self.0)
+impl Drop for CapturerPtr {
+    fn drop(&mut self) {
+        unsafe {
+            let _capturer = Box::from_raw(self.0);
+        }
     }
 }
 
@@ -125,6 +127,7 @@ pub(super) async fn check_init() -> ResultType<()> {
                     .map(|d| Display::WAYLAND(d.clone()))
                     .collect::<Vec<_>>();
                 let primary = super::display_service::get_primary_2(&all);
+                let primary = 1;
                 super::display_service::check_update_displays(&all);
                 let mut display_infos = super::display_service::get_sync_displays();
                 for display in display_infos.iter_mut() {
@@ -227,6 +230,7 @@ pub fn clear() {
             *write_lock = 0;
         }
     }
+    println!("REMOVE ME ================================ clear");
 }
 
 pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::CapturerInfo> {
@@ -243,7 +247,7 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
             }
             let rect = cap_display_info.rects[idx];
             let display = Display::WAYLAND(cap_display_info.displays[idx].clone());
-            let capturer = Capturer::new(display).with_context(|| "Failed to create capturer")?;
+            let capturer = Capturer::new(display)?;
             Ok(super::video_service::CapturerInfo {
                 origin: rect.0,
                 width: rect.1,

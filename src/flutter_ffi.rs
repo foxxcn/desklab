@@ -1826,8 +1826,10 @@ pub fn main_is_login_wayland() -> SyncReturn<bool> {
 }
 
 pub fn main_start_pa() {
-    #[cfg(target_os = "linux")]
-    std::thread::spawn(crate::ipc::start_pa);
+    log::info!("REMOVE ME ============================== main_start_pa, start pa");
+
+    // #[cfg(target_os = "linux")]
+    // std::thread::spawn(crate::ipc::start_pa);
 }
 
 pub fn main_hide_docker() -> SyncReturn<bool> {

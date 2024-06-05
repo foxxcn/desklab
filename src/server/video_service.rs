@@ -407,7 +407,18 @@ fn run(vs: VideoService) -> ResultType<()> {
 
     let display_idx = vs.idx;
     let sp = vs.sp;
-    let mut c = get_capturer(display_idx, last_portable_service_running)?;
+    log::info!("RMEOVE ME ========================== video service start 111, {display_idx}");
+    let c = get_capturer(display_idx, last_portable_service_running);
+    let mut c = match c {
+        Ok(c) => {
+            log::info!("RMEOVE ME ========================== video service ok 222, {display_idx}");
+            c
+        },
+        Err(e) => {
+            log::error!("REMOVE ME ======================== Failed to get capturer: {:?}", e);
+            return Err(e);
+        }
+    };
 
     let mut video_qos = VIDEO_QOS.lock().unwrap();
     video_qos.refresh(None);
