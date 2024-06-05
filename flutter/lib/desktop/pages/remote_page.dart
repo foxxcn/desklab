@@ -60,7 +60,12 @@ class RemotePage extends StatefulWidget {
   final SimpleWrapper<State<RemotePage>?> _lastState = SimpleWrapper(null);
   final DesktopTabController? tabController;
 
-  FFI get ffi => (_lastState.value! as _RemotePageState)._ffi;
+  FFI get ffi {
+    Log.info("REMOVE ME ============= RemotePage get ffi begin");
+    final x = (_lastState.value! as _RemotePageState)._ffi;
+    Log.info("REMOVE ME ============= RemotePage get ffi done");
+    return x;
+  }
 
   @override
   State<RemotePage> createState() {
