@@ -232,11 +232,11 @@ class RustDeskMultiWindowManager {
     return _newSession(openInTabs, type, methodName, remoteId, windows, msg);
   }
 
-  disconnect() async {
+  disconnect(String id) async {
     Log.info(
-        'REMOVE ME ========================= new session', StackTrace.current);
+        'REMOVE ME ========================= disconnect', StackTrace.current);
     for (final windowId in _remoteDesktopWindows) {
-      WindowController.fromWindowId(windowId).close();
+      DesktopMultiWindow.invokeMethod(windowId, kWindowEventDisconnSession, id);
     }
   }
 

@@ -2042,7 +2042,7 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
       case '--file-transfer':
         // ignore disconnect
         Future.delayed(Duration.zero, () {
-          rustDeskWinManager.disconnect();
+          rustDeskWinManager.disconnect(args![i + 1]);
         });
         return true;
         type = UriLinkType.fileTransfer;
@@ -2070,12 +2070,6 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
       case '--relay':
         forceRelay = true;
         break;
-      case '--disconnect':
-        // ignore disconnect
-        Future.delayed(Duration.zero, () {
-          rustDeskWinManager.disconnect();
-        });
-        return true;
       default:
         break;
     }
