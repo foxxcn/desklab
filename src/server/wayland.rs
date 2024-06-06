@@ -85,9 +85,8 @@ struct CapDisplayInfo {
     display_infos: Vec<DisplayInfo>,
 }
 
-#[tokio::main(flavor = "current_thread")]
-pub(super) async fn ensure_inited() -> ResultType<()> {
-    check_init().await
+pub(super) fn ensure_inited() -> ResultType<()> {
+    check_init()
 }
 
 pub(super) fn is_inited() -> Option<Message> {
@@ -111,7 +110,7 @@ pub(super) fn is_inited() -> Option<Message> {
     }
 }
 
-pub(super) async fn check_init() -> ResultType<()> {
+pub(super) fn check_init() -> ResultType<()> {
     if !is_x11() {
         let mut minx = i32::MAX;
         let mut maxx = i32::MIN;
@@ -121,6 +120,7 @@ pub(super) async fn check_init() -> ResultType<()> {
         if *CAP_DISPLAY_INFO.read().unwrap() == 0 {
             let mut lock = CAP_DISPLAY_INFO.write().unwrap();
             if *lock == 0 {
+                println!("REMOVE ME ================================== wayland check init, all");
                 let displays = WaylandDisplay::all()?;
                 let all = displays
                     .iter()
@@ -178,21 +178,46 @@ pub(super) async fn check_init() -> ResultType<()> {
             }
         }
         if minx != i32::MAX {
-            log::info!(
-                "update mouse resolution: ({}, {}), ({}, {})",
-                minx,
-                maxx,
-                miny,
-                maxy
-            );
-            allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
+            std::thread::spawn(move || {
+                update_mouse_resolution_(minx, maxx, miny, maxy);
+            });
         }
     }
     Ok(())
 }
 
-pub(super) async fn get_displays() -> ResultType<Vec<DisplayInfo>> {
-    check_init().await?;
+#[tokio::main(flavor = "current_thread")]
+pub async fn update_mouse_resolution_(minx: i32, maxx: i32, miny: i32, maxy: i32) {
+    log::info!(
+        "update mouse resolution: ({}, {}), ({}, {})",
+        minx,
+        maxx,
+        miny,
+        maxy
+    );
+    allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
+}
+
+pub(super) fn get_all() -> ResultType<Vec<Display>> {
+    check_init()?;
+    let addr = *CAP_DISPLAY_INFO.read().unwrap();
+    if addr != 0 {
+        let cap_display_info: *const CapDisplayInfo = addr as _;
+        unsafe {
+            let cap_display_info = &*cap_display_info;
+            Ok(cap_display_info
+                .displays
+                .iter()
+                .map(|d| Display::WAYLAND(d.clone()))
+                .collect::<Vec<_>>())
+        }
+    } else {
+        bail!("Failed to get capturer display info");
+    }
+}
+
+pub(super) fn get_displays() -> ResultType<Vec<DisplayInfo>> {
+    check_init()?;
     let addr = *CAP_DISPLAY_INFO.read().unwrap();
     if addr != 0 {
         let cap_display_info: *const CapDisplayInfo = addr as _;

@@ -310,11 +310,11 @@ pub fn is_inited_msg() -> Option<Message> {
     None
 }
 
-pub async fn update_get_sync_displays() -> ResultType<Vec<DisplayInfo>> {
+pub fn update_get_sync_displays() -> ResultType<Vec<DisplayInfo>> {
     #[cfg(target_os = "linux")]
     {
         if !is_x11() {
-            return super::wayland::get_displays().await;
+            return super::wayland::get_displays();
         }
     }
     check_update_displays(&try_get_displays()?);
@@ -367,8 +367,17 @@ fn no_displays(displays: &Vec<Display>) -> bool {
 }
 
 #[inline]
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn try_get_displays() -> ResultType<Vec<Display>> {
+    Ok(Display::all()?)
+}
+
+#[inline]
+#[cfg(target_os = "linux")]
+pub fn try_get_displays() -> ResultType<Vec<Display>> {
+    if !is_x11() {
+        return wayland::get_all();
+    }
     Ok(Display::all()?)
 }
 
@@ -394,7 +403,8 @@ pub fn try_get_displays_(add_amyuni_headless: bool) -> ResultType<Vec<Display>> 
     let mut displays = Display::all()?;
 
     // Do not add virtual display if the platform is not installed or the virtual display is not supported.
-    if !crate::platform::is_installed() || !virtual_display_manager::is_virtual_display_supported() {
+    if !crate::platform::is_installed() || !virtual_display_manager::is_virtual_display_supported()
+    {
         return Ok(displays);
     }
 

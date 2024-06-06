@@ -1255,7 +1255,7 @@ impl Connection {
 
             try_activate_screen();
 
-            match super::display_service::update_get_sync_displays().await {
+            match super::display_service::update_get_sync_displays() {
                 Err(err) => {
                     res.set_error(format!("{}", err));
                 }

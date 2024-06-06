@@ -4,7 +4,7 @@ use std::os::unix::io::AsRawFd;
 use std::process::Command;
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use std::time::Duration;
-use tracing::{debug, trace, warn, info};
+use tracing::{debug, info, trace, warn};
 
 use dbus::{
     arg::{OwnedFd, PropMap, RefArg, Variant},
@@ -106,6 +106,7 @@ pub struct PipeWireCapturable {
 
 impl PipeWireCapturable {
     fn new(conn: Arc<SyncConnection>, fd: OwnedFd, stream: PwStreamInfo) -> Self {
+        println!("REMOVE ME ====================================== new PipeWireCapturable");
         // alternative to get screen resolution as stream.size is not always correct ex: on fractional scaling
         // https://github.com/rustdesk/rustdesk/issues/6116#issuecomment-1817724244
         let res = get_res(Self {
@@ -232,7 +233,11 @@ impl PipeWireRecorder {
         ));
         appsink.set_caps(Some(&caps));
 
-        println!("REMOVE ME ============================= PipeWireRecorder playing, fd: {}, path: {} ", capturable.fd.as_raw_fd(), capturable.path);
+        println!(
+            "REMOVE ME ============================= PipeWireRecorder playing, fd: {}, path: {} ",
+            capturable.fd.as_raw_fd(),
+            capturable.path
+        );
         let x = pipeline.set_state(gst::State::Playing);
         if x.is_ok() {
             println!("REMOVE ME ============================= PipeWireRecorder playing ok , fd: {}, path: {} ", capturable.fd.as_raw_fd(), capturable.path);
@@ -843,6 +848,8 @@ pub fn get_capturables() -> Result<Vec<PipeWireCapturable>, Box<dyn Error>> {
             return Err(Box::new(DBusError("RDP response is None.".into())));
         }
     };
+
+    println!("REMOVE ME ============================ get_capturables");
 
     Ok(rdp_res
         .streams
