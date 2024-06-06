@@ -375,9 +375,9 @@ pub fn try_get_displays() -> ResultType<Vec<Display>> {
 #[inline]
 #[cfg(target_os = "linux")]
 pub fn try_get_displays() -> ResultType<Vec<Display>> {
-    if !is_x11() {
-        return wayland::get_all();
-    }
+    // if !is_x11() {
+    //     return wayland::get_all();
+    // }
     Ok(Display::all()?)
 }
 

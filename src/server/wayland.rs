@@ -87,7 +87,7 @@ impl TraitCapturer for CapturerPtr {
 struct CapDisplayInfo {
     primary: usize,
     rects: Vec<((i32, i32), usize, usize)>,
-    displays: Vec<WaylandDisplay>,
+    // displays: Vec<WaylandDisplay>,
     display_infos: Vec<DisplayInfo>,
     capturers: Vec<CapturerPtr>,
 }
@@ -128,11 +128,12 @@ pub(super) fn check_init() -> ResultType<()> {
             let mut lock = CAP_DISPLAY_INFO.write().unwrap();
             if *lock == 0 {
                 println!("REMOVE ME ================================== wayland check init, all");
-                let displays = WaylandDisplay::all()?;
-                let all = displays
-                    .iter()
-                    .map(|d| Display::WAYLAND(d.clone()))
-                    .collect::<Vec<_>>();
+                // let displays = WaylandDisplay::all()?;
+                // let all = displays
+                //     .iter()
+                //     .map(|d| Display::WAYLAND(d.clone()))
+                //     .collect::<Vec<_>>();
+                let all = Display::all()?;
                 let primary = super::display_service::get_primary_2(&all);
                 let primary = 1;
                 super::display_service::check_update_displays(&all);
@@ -150,7 +151,7 @@ pub(super) fn check_init() -> ResultType<()> {
 
                 let mut rects: Vec<((i32, i32), usize, usize)> = Vec::new();
                 let mut capturers: Vec<CapturerPtr> = Vec::new();
-                for (idx, display) in displays.iter().enumerate() {
+                for (idx, display) in all.into_iter().enumerate() {
                     let (origin, width, height) =
                         (display.origin(), display.width(), display.height());
                     log::debug!(
@@ -183,7 +184,7 @@ pub(super) fn check_init() -> ResultType<()> {
                 let cap_display_info = Box::into_raw(Box::new(CapDisplayInfo {
                     primary,
                     rects,
-                    displays,
+                    // displays,
                     display_infos,
                     capturers,
                 }));
@@ -211,23 +212,23 @@ pub async fn update_mouse_resolution_(minx: i32, maxx: i32, miny: i32, maxy: i32
     allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
 }
 
-pub(super) fn get_all() -> ResultType<Vec<Display>> {
-    check_init()?;
-    let addr = *CAP_DISPLAY_INFO.read().unwrap();
-    if addr != 0 {
-        let cap_display_info: *const CapDisplayInfo = addr as _;
-        unsafe {
-            let cap_display_info = &*cap_display_info;
-            Ok(cap_display_info
-                .displays
-                .iter()
-                .map(|d| Display::WAYLAND(d.clone()))
-                .collect::<Vec<_>>())
-        }
-    } else {
-        bail!("Failed to get capturer display info");
-    }
-}
+// pub(super) fn get_all() -> ResultType<Vec<Display>> {
+//     check_init()?;
+//     let addr = *CAP_DISPLAY_INFO.read().unwrap();
+//     if addr != 0 {
+//         let cap_display_info: *const CapDisplayInfo = addr as _;
+//         unsafe {
+//             let cap_display_info = &*cap_display_info;
+//             Ok(cap_display_info
+//                 .displays
+//                 .iter()
+//                 .map(|d| Display::WAYLAND(d.clone()))
+//                 .collect::<Vec<_>>())
+//         }
+//     } else {
+//         bail!("Failed to get capturer display info");
+//     }
+// }
 
 pub(super) fn get_displays() -> ResultType<Vec<DisplayInfo>> {
     check_init()?;
@@ -268,7 +269,6 @@ pub fn clear() {
             for capturer in box_cap_display_info.capturers {
                 let _box_capturer = Box::from_raw(capturer.0);
             }
-
             *write_lock = 0;
         }
     }
@@ -284,7 +284,7 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
         let cap_display_info: *const CapDisplayInfo = addr as _;
         unsafe {
             let cap_display_info = &*cap_display_info;
-            if idx >= cap_display_info.displays.len() {
+            if idx >= cap_display_info.cap_display_info.len() {
                 bail!("Invalid capturer index");
             }
             let rect = cap_display_info.rects[idx];
