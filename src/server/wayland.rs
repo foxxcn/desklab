@@ -64,6 +64,12 @@ fn try_log(err: &String) {
 
 struct CapturerPtr(*mut Capturer);
 
+impl Clone for CapturerPtr {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
 impl Drop for CapturerPtr {
     fn drop(&mut self) {
         unsafe {
@@ -172,7 +178,7 @@ pub(super) fn check_init() -> ResultType<()> {
 
                     let capturer = Capturer::new(Display::WAYLAND(display.clone()))?;
                     let capturer = CapturerPtr(Box::into_raw(Box::new(capturer)));
-                    capturers.add(capturer);
+                    capturers.push(capturer);
                 }
                 let cap_display_info = Box::into_raw(Box::new(CapDisplayInfo {
                     primary,
@@ -282,9 +288,9 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
                 bail!("Invalid capturer index");
             }
             let rect = cap_display_info.rects[idx];
-            let display = Display::WAYLAND(cap_display_info.displays[idx].clone());
+            // let display = Display::WAYLAND(cap_display_info.displays[idx].clone());
             // let capturer = Capturer::new(display)?;
-            let capturer = cap_display_info.capturers[idx].clone();
+            let capturer = Box::new(cap_display_info.capturers[idx].clone());
             Ok(super::video_service::CapturerInfo {
                 origin: rect.0,
                 width: rect.1,
