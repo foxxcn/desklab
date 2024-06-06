@@ -390,6 +390,7 @@ fn run(vs: VideoService) -> ResultType<()> {
     #[cfg(target_os = "linux")]
     let _wayland_call_on_ret =
         if !config::LocalConfig::get_option(config::keys::RESTORE_TOKEN_CONF_KEY).is_empty() {
+            println!("REMOVE ME ==================== Restore token detected, clear wayland");
             Some(SimpleCallOnReturn {
                 b: true,
                 f: Box::new(|| {

@@ -83,6 +83,7 @@ struct CapDisplayInfo {
     rects: Vec<((i32, i32), usize, usize)>,
     displays: Vec<WaylandDisplay>,
     display_infos: Vec<DisplayInfo>,
+    capturers: Vec<CapturerPtr>,
 }
 
 pub(super) fn ensure_inited() -> ResultType<()> {
@@ -142,6 +143,7 @@ pub(super) fn check_init() -> ResultType<()> {
                 );
 
                 let mut rects: Vec<((i32, i32), usize, usize)> = Vec::new();
+                let mut capturers: Vec<CapturerPtr> = Vec::new();
                 for (idx, display) in displays.iter().enumerate() {
                     let (origin, width, height) =
                         (display.origin(), display.width(), display.height());
@@ -167,12 +169,17 @@ pub(super) fn check_init() -> ResultType<()> {
                     if maxy < origin.1 + height as i32 {
                         maxy = origin.1 + height as i32;
                     }
+
+                    let capturer = Capturer::new(Display::WAYLAND(display.clone()))?;
+                    let capturer = CapturerPtr(Box::into_raw(Box::new(capturer)));
+                    capturers.add(capturer);
                 }
                 let cap_display_info = Box::into_raw(Box::new(CapDisplayInfo {
                     primary,
                     rects,
                     displays,
                     display_infos,
+                    capturers,
                 }));
                 *lock = cap_display_info as _;
             }
@@ -251,7 +258,11 @@ pub fn clear() {
     if *write_lock != 0 {
         let cap_display_info: *mut CapDisplayInfo = *write_lock as _;
         unsafe {
-            let _box_cap_display_info = Box::from_raw(cap_display_info);
+            let box_cap_display_info = Box::from_raw(cap_display_info);
+            for capturer in box_cap_display_info.capturers {
+                let _box_capturer = Box::from_raw(capturer.0);
+            }
+
             *write_lock = 0;
         }
     }
@@ -272,7 +283,8 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
             }
             let rect = cap_display_info.rects[idx];
             let display = Display::WAYLAND(cap_display_info.displays[idx].clone());
-            let capturer = Capturer::new(display)?;
+            // let capturer = Capturer::new(display)?;
+            let capturer = cap_display_info.capturers[idx].clone();
             Ok(super::video_service::CapturerInfo {
                 origin: rect.0,
                 width: rect.1,
@@ -281,7 +293,7 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
                 current: idx,
                 privacy_mode_id: 0,
                 _capturer_privacy_mode_id: 0,
-                capturer: Box::new(capturer),
+                capturer,
             })
         }
     } else {
