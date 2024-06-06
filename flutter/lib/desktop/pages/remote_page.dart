@@ -181,6 +181,7 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   void onWindowBlur() {
+    Log.info("REMOVE ME ============= RemotePageState onWindowBlur");
     super.onWindowBlur();
     // On windows, we use `focus` way to handle keyboard better.
     // Now on Linux, there's some rdev issues which will break the input.
@@ -196,6 +197,7 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   void onWindowFocus() {
+    Log.info("REMOVE ME ============= RemotePageState onWindowFocus");
     super.onWindowFocus();
     // See [onWindowBlur].
     if (isWindows) {
