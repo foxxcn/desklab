@@ -143,7 +143,7 @@ pub(super) fn check_init() -> ResultType<()> {
                 }
                 log::debug!(
                     "#displays: {}, primary: {}, cpus: {}/{}",
-                    displays.len(),
+                    all.len(),
                     primary,
                     num_cpus::get_physical(),
                     num_cpus::get(),
@@ -177,7 +177,7 @@ pub(super) fn check_init() -> ResultType<()> {
                         maxy = origin.1 + height as i32;
                     }
 
-                    let capturer = Capturer::new(Display::WAYLAND(display.clone()))?;
+                    let capturer = Capturer::new(display)?;
                     let capturer = CapturerPtr(Box::into_raw(Box::new(capturer)));
                     capturers.push(capturer);
                 }
@@ -284,7 +284,7 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
         let cap_display_info: *const CapDisplayInfo = addr as _;
         unsafe {
             let cap_display_info = &*cap_display_info;
-            if idx >= cap_display_info.cap_display_info.len() {
+            if idx >= cap_display_info.display_infos.len() {
                 bail!("Invalid capturer index");
             }
             let rect = cap_display_info.rects[idx];
@@ -295,7 +295,7 @@ pub(super) fn get_capturer(idx: usize) -> ResultType<super::video_service::Captu
                 origin: rect.0,
                 width: rect.1,
                 height: rect.2,
-                ndisplay: cap_display_info.displays.len(),
+                ndisplay: cap_display_info.display_infos.len(),
                 current: idx,
                 privacy_mode_id: 0,
                 _capturer_privacy_mode_id: 0,
