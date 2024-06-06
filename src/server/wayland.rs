@@ -84,7 +84,7 @@ struct CapDisplayInfo {
     num: usize,
     primary: usize,
     current: usize,
-    capturer: CapturerPtr,
+    capturers: Vec<CapturerPtr>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -154,68 +154,76 @@ pub(super) async fn check_init() -> ResultType<()> {
                     rects.push((d.origin(), d.width(), d.height()));
                 }
 
-                let display = all.remove(current);
-                let (origin, width, height) = (display.origin(), display.width(), display.height());
-                log::debug!(
-                    "#displays={}, current={}, origin: {:?}, width={}, height={}, cpus={}/{}",
-                    num,
-                    current,
-                    &origin,
-                    width,
-                    height,
-                    num_cpus::get_physical(),
-                    num_cpus::get(),
-                );
+                let mut capturers = Vec::new();
 
-                let (max_width, max_height) = match get_max_desktop_resolution() {
-                    Some(result) if !result.is_empty() => {
-                        let resolution: Vec<&str> = result.split(" ").collect();
-                        let w: i32 = resolution[0].parse().unwrap_or(origin.0 + width as i32);
-                        let h: i32 = resolution[2]
-                            .trim_end_matches(",")
-                            .parse()
-                            .unwrap_or(origin.1 + height as i32);
-                        if w < origin.0 + width as i32 || h < origin.1 + height as i32 {
-                            (origin.0 + width as i32, origin.1 + height as i32)
-                        }
-                        else{
-                            (w, h)
-                        }
-                    }
-                    _ => (origin.0 + width as i32, origin.1 + height as i32),
-                };
+                for (i, display) in all.into_iter().enumerate() {
+                    let capturer = Box::into_raw(Box::new(Capturer::new(display)?));
+                    let capturer = CapturerPtr(capturer);
+                    capturers.push(capturer);
+                }
 
-                minx = 0;
-                maxx = max_width;
-                miny = 0;
-                maxy = max_height;
+                // let display = all.remove(current);
+                // let (origin, width, height) = (display.origin(), display.width(), display.height());
+                // log::debug!(
+                //     "#displays={}, current={}, origin: {:?}, width={}, height={}, cpus={}/{}",
+                //     num,
+                //     current,
+                //     &origin,
+                //     width,
+                //     height,
+                //     num_cpus::get_physical(),
+                //     num_cpus::get(),
+                // );
 
-                let capturer = Box::into_raw(Box::new(
-                    Capturer::new(display).with_context(|| "Failed to create capturer")?,
-                ));
-                let capturer = CapturerPtr(capturer);
+                // let (max_width, max_height) = match get_max_desktop_resolution() {
+                //     Some(result) if !result.is_empty() => {
+                //         let resolution: Vec<&str> = result.split(" ").collect();
+                //         let w: i32 = resolution[0].parse().unwrap_or(origin.0 + width as i32);
+                //         let h: i32 = resolution[2]
+                //             .trim_end_matches(",")
+                //             .parse()
+                //             .unwrap_or(origin.1 + height as i32);
+                //         if w < origin.0 + width as i32 || h < origin.1 + height as i32 {
+                //             (origin.0 + width as i32, origin.1 + height as i32)
+                //         }
+                //         else{
+                //             (w, h)
+                //         }
+                //     }
+                //     _ => (origin.0 + width as i32, origin.1 + height as i32),
+                // };
+
+                // minx = 0;
+                // maxx = max_width;
+                // miny = 0;
+                // maxy = max_height;
+
+                // let capturer = Box::into_raw(Box::new(
+                //     Capturer::new(display).with_context(|| "Failed to create capturer")?,
+                // ));
+                // let capturer = CapturerPtr(capturer);
                 let cap_display_info = Box::into_raw(Box::new(CapDisplayInfo {
                     rects,
                     displays,
                     num,
                     primary,
                     current,
-                    capturer,
+                    capturers,
                 }));
                 *lock = cap_display_info as _;
             }
         }
 
-        if minx != maxx && miny != maxy {
-            log::info!(
-                "update mouse resolution: ({}, {}), ({}, {})",
-                minx,
-                maxx,
-                miny,
-                maxy
-            );
-            allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
-        }
+        // if minx != maxx && miny != maxy {
+        //     log::info!(
+        //         "update mouse resolution: ({}, {}), ({}, {})",
+        //         minx,
+        //         maxx,
+        //         miny,
+        //         maxy
+        //     );
+        //     allow_err!(input_service::update_mouse_resolution(minx, maxx, miny, maxy).await);
+        // }
     }
     Ok(())
 }
@@ -255,7 +263,9 @@ pub fn clear() {
     if *write_lock != 0 {
         let cap_display_info: *mut CapDisplayInfo = *write_lock as _;
         unsafe {
-            let _box_capturer = Box::from_raw((*cap_display_info).capturer.0);
+            for capturer in &(*cap_display_info).capturers {
+                let _box_capturer = Box::from_raw(capturer.0);
+            }
             let _box_cap_display_info = Box::from_raw(cap_display_info);
             *write_lock = 0;
         }
@@ -272,6 +282,7 @@ pub(super) fn get_capturer() -> ResultType<super::video_service::CapturerInfo> {
         unsafe {
             let cap_display_info = &*cap_display_info;
             let rect = cap_display_info.rects[cap_display_info.current];
+            let capturer = cap_display_info.capturers[cap_display_info.current].clone();
             Ok(super::video_service::CapturerInfo {
                 origin: rect.0,
                 width: rect.1,
@@ -280,7 +291,7 @@ pub(super) fn get_capturer() -> ResultType<super::video_service::CapturerInfo> {
                 current: cap_display_info.current,
                 privacy_mode_id: 0,
                 _capturer_privacy_mode_id: 0,
-                capturer: Box::new(cap_display_info.capturer.clone()),
+                capturer,
             })
         }
     } else {

@@ -390,13 +390,13 @@ fn run(vs: VideoService) -> ResultType<()> {
     // But for now, we do not support multi-screen capture on wayland.
     #[cfg(target_os = "linux")]
     super::wayland::ensure_inited()?;
-    #[cfg(target_os = "linux")]
-    let _wayland_call_on_ret = SimpleCallOnReturn {
-        b: true,
-        f: Box::new(|| {
-            super::wayland::clear();
-        }),
-    };
+    // #[cfg(target_os = "linux")]
+    // let _wayland_call_on_ret = SimpleCallOnReturn {
+    //     b: true,
+    //     f: Box::new(|| {
+    //         super::wayland::clear();
+    //     }),
+    // };
 
     #[cfg(windows)]
     let last_portable_service_running = crate::portable_service::client::running();

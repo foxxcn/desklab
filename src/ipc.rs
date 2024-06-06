@@ -580,6 +580,7 @@ pub async fn connect(ms_timeout: u64, postfix: &str) -> ResultType<ConnectionTmp
 #[cfg(target_os = "linux")]
 #[tokio::main(flavor = "current_thread")]
 pub async fn start_pa() {
+    return;
     use crate::audio_service::AUDIO_DATA_SIZE_U8;
 
     match new_listener("_pa").await {
