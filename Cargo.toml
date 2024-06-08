@@ -27,6 +27,7 @@ default = ["use_dasp"]
 hwcodec = ["scrap/hwcodec"]
 vram = ["scrap/vram"]
 mediacodec = ["scrap/mediacodec"]
+audio_asio = ["cpal/asio"]
 plugin_framework = []
 linux-pkg-config = ["magnum-opus/linux-pkg-config", "scrap/linux-pkg-config"]
 unix-file-copy-paste = [
@@ -79,7 +80,7 @@ shutdown_hooks = "0.1"
 totp-rs = { version = "5.4", default-features = false, features = ["gen_secret", "otpauth"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "linux")))'.dependencies]
-cpal = "0.15"
+cpal = { version = "0.15", features = ["asio"]}
 ringbuf = "0.3"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
