@@ -147,7 +147,7 @@ mod cpal_impl {
     };
 
     lazy_static::lazy_static! {
-        static ref HOST: Host = cpal::default_host();
+        static ref HOST: Host = crate::get_cpal_host();
         static ref INPUT_BUFFER: Arc<Mutex<std::collections::VecDeque<f32>>> = Default::default();
     }
 
@@ -211,6 +211,7 @@ mod cpal_impl {
         encoder: &mut Encoder,
         sp: &GenericService,
     ) {
+        println!("REMOVE ME ============================== audio data size 111: {}", data.len());
         let mut data = data;
         if sample_rate0 != sample_rate {
             data = crate::common::audio_resample(&data, sample_rate0, sample_rate, device_channel);
@@ -328,6 +329,9 @@ mod cpal_impl {
     where
         T: cpal::SizedSample + dasp::sample::ToSample<f32>,
     {
+
+        log::info!("REMVE ME ======================== config: {:?}, sample_rate: {}, chnnel: {:?}", config, sample_rate, &encode_channel);
+
         let err_fn = move |err| {
             // too many UnknownErrno, will improve later
             log::trace!("an error occurred on stream: {}", err);
@@ -446,6 +450,8 @@ fn send_f32(data: &[f32], encoder: &mut Encoder, sp: &GenericService) {
         }
     }
 
+    println!("REMOVE ME ============================== audio data size: {}", data.len());
+
     #[cfg(not(target_os = "android"))]
     match encoder.encode_vec_float(data, data.len() * 6) {
         Ok(data) => {
@@ -455,7 +461,10 @@ fn send_f32(data: &[f32], encoder: &mut Encoder, sp: &GenericService) {
                 ..Default::default()
             });
             sp.send(msg_out);
+            println!("REMOVE ME ============================== audio msg");
         }
-        Err(_) => {}
+        Err(e) => {
+          //  println!("REMOVE ME ============================== encode failed: {:?}", e);
+        }
     }
 }

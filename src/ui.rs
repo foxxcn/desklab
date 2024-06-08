@@ -747,7 +747,7 @@ impl sciter::host::HostHandler for UIHostHandler {
 fn get_sound_inputs() -> Vec<String> {
     let mut out = Vec::new();
     use cpal::traits::{DeviceTrait, HostTrait};
-    let host = cpal::default_host();
+    let host = crate::get_cpal_host();
     if let Ok(devices) = host.devices() {
         for device in devices {
             if device.default_input_config().is_err() {

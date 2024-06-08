@@ -64,7 +64,8 @@ use scrap::{
 use crate::{
     check_port,
     common::input::{MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_TYPE_DOWN, MOUSE_TYPE_UP},
-    create_symmetric_key_msg, decode_id_pk, get_rs_pk, is_keyboard_mode_supported, secure_tcp,
+    create_symmetric_key_msg, decode_id_pk, get_cpal_host, get_rs_pk, is_keyboard_mode_supported,
+    secure_tcp,
     ui_interface::{get_buildin_option, use_texture_render},
     ui_session_interface::{InvokeUiSession, Session},
 };
@@ -135,7 +136,7 @@ struct TextClipboardState {
 
 #[cfg(not(any(target_os = "android", target_os = "linux")))]
 lazy_static::lazy_static! {
-    static ref AUDIO_HOST: Host = cpal::default_host();
+    static ref AUDIO_HOST: Host = get_cpal_host();
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]

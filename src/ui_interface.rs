@@ -323,29 +323,17 @@ pub fn get_sound_inputs() -> Vec<String> {
     let mut a = Vec::new();
     #[cfg(not(target_os = "linux"))]
     {
-        fn get_sound_inputs_() -> Vec<String> {
-            let mut out = Vec::new();
-            use cpal::traits::{DeviceTrait, HostTrait};
-            let host = cpal::default_host();
-            if let Ok(devices) = host.devices() {
-                for device in devices {
-                    if device.default_input_config().is_err() {
-                        continue;
-                    }
-                    if let Ok(name) = device.name() {
-                        out.push(name);
-                    }
-                }
-            }
-            out
-        }
-
         let inputs = Arc::new(Mutex::new(Vec::new()));
         let cloned = inputs.clone();
         // can not call below in UI thread, because conflict with sciter sound com initialization
-        std::thread::spawn(move || *cloned.lock().unwrap() = get_sound_inputs_())
-            .join()
-            .ok();
+        std::thread::spawn(move || {
+            *cloned.lock().unwrap() = crate::audio::cpal_impl::get_sound_inputs(
+                std::time::Duration::from_millis(1_000),
+            )
+            .unwrap_or_default()
+        })
+        .join()
+        .ok();
         for name in inputs.lock().unwrap().drain(..) {
             a.push(name);
         }

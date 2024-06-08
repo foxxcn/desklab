@@ -167,6 +167,23 @@ pub fn set_sound_input(device: String) {
     }
 }
 
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
+pub fn get_cpal_host() -> cpal::Host {
+    #[cfg(feature = "audio_asio")]
+    match cpal::host_from_id(cpal::HostId::Asio) {
+        Ok(host) => {
+            log::info!("Using Asio host");
+            return host;
+        },
+        Err(e) => {
+            log::error!("Failed to get Asio host: {}", e);
+            log::info!("Fallback to default host");
+        },
+    }
+    cpal::default_host()
+}
+    
+
 /// Get system's default sound input device name.
 #[inline]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -174,7 +191,7 @@ pub fn get_default_sound_input() -> Option<String> {
     #[cfg(not(target_os = "linux"))]
     {
         use cpal::traits::{DeviceTrait, HostTrait};
-        let host = cpal::default_host();
+        let host = get_cpal_host();
         let dev = host.default_input_device();
         return if let Some(dev) = dev {
             match dev.name() {
