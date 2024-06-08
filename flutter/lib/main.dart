@@ -34,8 +34,18 @@ int? kWindowId;
 WindowType? kWindowType;
 late List<String> kBootArgs;
 
+var startTime = '11';
+
 Future<void> main(List<String> args) async {
+  DateTime today = DateTime.now();
+  startTime =
+      "${today.year.toString()}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}${today.hour.toString().padLeft(2, '0')}${today.minute.toString().padLeft(2, '0')}${today.second.toString().padLeft(2, '0')}";
+
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (args.isNotEmpty && args.first == 'multi_window') {
+    kWindowId = int.parse(args[1]);
+  }
 
   Log.info("REMOVE ME ============= launch args: $args");
   kBootArgs = List.from(args);

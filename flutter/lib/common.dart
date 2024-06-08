@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:back_button_interceptor/back_button_interceptor.dart';
@@ -3410,12 +3411,13 @@ class Log {
       DateTime today = DateTime.now();
       String dateSlug =
           "${today.year.toString()}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')} ${today.hour.toString().padLeft(2, '0')}:${today.minute.toString().padLeft(2, '0')}:${today.second.toString().padLeft(2, '0')}";
+      final logFile = File('/Users/rustdesk/workspace/rust/rustdesk/logs/${startTime}_${kWindowId == null ? 'main' : 'remote'}.txt');
       if (stackTrace != null) {
         CustomTrace customTrace = CustomTrace(stackTrace);
-        print(
-            '[$type] $dateSlug ${customTrace.fileName}:(${customTrace.lineNumber}) - $message');
+        logFile.writeAsStringSync(
+            '[$type] $dateSlug ${customTrace.fileName}:(${customTrace.lineNumber}) - $message\n', mode: FileMode.writeOnlyAppend);
       } else {
-        print('[$type] $dateSlug $message');
+        logFile.writeAsStringSync('[$type] $dateSlug $message\n', mode: FileMode.writeOnlyAppend);
       }
       return true;
     }());
