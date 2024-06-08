@@ -1,0 +1,603 @@
+{
+  "times" : 1,
+  "steps" : [
+    {
+      "enabled" : true,
+      "source" : {
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "modifiers" : [
+
+        ],
+        "isMouseInput" : true,
+        "isRepeat" : false,
+        "keyCode" : 0
+      },
+      "text" : "open \/Users\/rustdesk\/workspace\/rust\/rustdesk\/flutter\/build\/macos\/Build\/Products\/Debug\/RustDesk.app",
+      "times" : 1,
+      "id" : "66CCDC3B-3668-4AAD-90A3-49805CBE161F",
+      "clickType" : "onClick",
+      "point" : null,
+      "name" : "Step 1",
+      "delay" : null,
+      "appURL" : "file:\/\/\/Applications\/RustDesk.app\/",
+      "delaySeconds" : 1,
+      "imageURLs" : null,
+      "type" : "script"
+    },
+    {
+      "id" : "A8317136-FEDD-4BBD-987F-CD4416DA46FE",
+      "type" : "keyboardOrMouse",
+      "text" : "",
+      "name" : "Step 2",
+      "appURL" : null,
+      "point" : [
+        551.125,
+        652.3359375
+      ],
+      "imageURLs" : null,
+      "times" : 1,
+      "delay" : null,
+      "delaySeconds" : 5,
+      "source" : {
+        "type" : 1,
+        "isRepeat" : false,
+        "isMouseInput" : true,
+        "readable" : "Left Mouse",
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ]
+      },
+      "clickType" : "onClick",
+      "enabled" : true
+    },
+    {
+      "delay" : null,
+      "times" : 1,
+      "source" : {
+        "keyCode" : 0,
+        "isRepeat" : false,
+        "readable" : "Left Mouse",
+        "isMouseInput" : true,
+        "modifiers" : [
+
+        ],
+        "type" : 1
+      },
+      "enabled" : true,
+      "imageURLs" : null,
+      "appURL" : null,
+      "clickType" : "onClick",
+      "name" : "Step 3",
+      "type" : "keyboardOrMouse",
+      "id" : "B30E2561-3A06-4020-9542-4A82357F1D82",
+      "delaySeconds" : 10,
+      "point" : [
+        334.61328125,
+        616.625
+      ],
+      "text" : ""
+    },
+    {
+      "text" : "",
+      "imageURLs" : null,
+      "enabled" : true,
+      "delay" : null,
+      "id" : "82DA0255-5136-4DA2-BA04-3B2B489CA8DA",
+      "appURL" : null,
+      "times" : 1,
+      "source" : {
+        "modifiers" : [
+
+        ],
+        "type" : 1,
+        "isMouseInput" : true,
+        "isRepeat" : false,
+        "keyCode" : 0,
+        "readable" : "Left Mouse"
+      },
+      "delaySeconds" : 1,
+      "name" : "Step 4",
+      "type" : "keyboardOrMouse",
+      "clickType" : "onClick",
+      "point" : [
+        536.74609375,
+        652.39453125
+      ]
+    },
+    {
+      "appURL" : null,
+      "times" : 1,
+      "delaySeconds" : 50,
+      "type" : "keyboardOrMouse",
+      "source" : {
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ],
+        "isMouseInput" : true,
+        "isRepeat" : false
+      },
+      "delay" : null,
+      "text" : "",
+      "imageURLs" : null,
+      "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
+      "enabled" : true,
+      "point" : [
+        473.94921875,
+        613.06640625
+      ],
+      "clickType" : "onClick",
+      "name" : "Step 5"
+    },
+    {
+      "type" : "keyboardOrMouse",
+      "delay" : null,
+      "source" : {
+        "isRepeat" : false,
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "modifiers" : [
+
+        ],
+        "keyCode" : 0,
+        "isMouseInput" : true
+      },
+      "text" : "",
+      "id" : "A8317136-FEDD-4BBD-987F-CD4416DA46FE",
+      "clickType" : "onClick",
+      "times" : 1,
+      "appURL" : null,
+      "enabled" : true,
+      "imageURLs" : null,
+      "point" : [
+        551.125,
+        652.3359375
+      ],
+      "delaySeconds" : 5,
+      "name" : "Step 2"
+    },
+    {
+      "clickType" : "onClick",
+      "delaySeconds" : 10,
+      "times" : 1,
+      "appURL" : null,
+      "enabled" : true,
+      "delay" : null,
+      "imageURLs" : null,
+      "name" : "Step 3",
+      "type" : "keyboardOrMouse",
+      "id" : "B30E2561-3A06-4020-9542-4A82357F1D82",
+      "point" : [
+        334.61328125,
+        616.625
+      ],
+      "source" : {
+        "type" : 1,
+        "keyCode" : 0,
+        "isMouseInput" : true,
+        "readable" : "Left Mouse",
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false
+      },
+      "text" : ""
+    },
+    {
+      "delay" : null,
+      "times" : 1,
+      "point" : [
+        536.74609375,
+        652.39453125
+      ],
+      "type" : "keyboardOrMouse",
+      "clickType" : "onClick",
+      "enabled" : true,
+      "name" : "Step 4",
+      "source" : {
+        "type" : 1,
+        "isMouseInput" : true,
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false,
+        "readable" : "Left Mouse"
+      },
+      "id" : "82DA0255-5136-4DA2-BA04-3B2B489CA8DA",
+      "appURL" : null,
+      "text" : "",
+      "delaySeconds" : 1,
+      "imageURLs" : null
+    },
+    {
+      "type" : "keyboardOrMouse",
+      "imageURLs" : null,
+      "name" : "Step 5",
+      "appURL" : null,
+      "times" : 1,
+      "clickType" : "onClick",
+      "delay" : null,
+      "delaySeconds" : 50,
+      "point" : [
+        473.94921875,
+        613.06640625
+      ],
+      "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
+      "enabled" : true,
+      "source" : {
+        "isMouseInput" : true,
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "isRepeat" : false,
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ]
+      },
+      "text" : ""
+    },
+    {
+      "text" : "",
+      "type" : "keyboardOrMouse",
+      "delay" : null,
+      "clickType" : "onClick",
+      "delaySeconds" : 5,
+      "name" : "Step 2",
+      "times" : 1,
+      "enabled" : true,
+      "source" : {
+        "keyCode" : 0,
+        "type" : 1,
+        "modifiers" : [
+
+        ],
+        "readable" : "Left Mouse",
+        "isMouseInput" : true,
+        "isRepeat" : false
+      },
+      "imageURLs" : null,
+      "point" : [
+        551.125,
+        652.3359375
+      ],
+      "id" : "A8317136-FEDD-4BBD-987F-CD4416DA46FE",
+      "appURL" : null
+    },
+    {
+      "clickType" : "onClick",
+      "type" : "keyboardOrMouse",
+      "point" : [
+        334.61328125,
+        616.625
+      ],
+      "delay" : null,
+      "id" : "B30E2561-3A06-4020-9542-4A82357F1D82",
+      "enabled" : true,
+      "name" : "Step 3",
+      "delaySeconds" : 10,
+      "text" : "",
+      "imageURLs" : null,
+      "times" : 1,
+      "source" : {
+        "isMouseInput" : true,
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false
+      },
+      "appURL" : null
+    },
+    {
+      "type" : "keyboardOrMouse",
+      "enabled" : true,
+      "name" : "Step 4",
+      "imageURLs" : null,
+      "text" : "",
+      "times" : 1,
+      "appURL" : null,
+      "source" : {
+        "isMouseInput" : true,
+        "isRepeat" : false,
+        "type" : 1,
+        "readable" : "Left Mouse",
+        "modifiers" : [
+
+        ],
+        "keyCode" : 0
+      },
+      "delaySeconds" : 1,
+      "delay" : null,
+      "point" : [
+        536.74609375,
+        652.39453125
+      ],
+      "id" : "82DA0255-5136-4DA2-BA04-3B2B489CA8DA",
+      "clickType" : "onClick"
+    },
+    {
+      "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
+      "enabled" : true,
+      "text" : "",
+      "delay" : null,
+      "imageURLs" : null,
+      "clickType" : "onClick",
+      "times" : 1,
+      "appURL" : null,
+      "type" : "keyboardOrMouse",
+      "delaySeconds" : 50,
+      "name" : "Step 5",
+      "point" : [
+        473.94921875,
+        613.06640625
+      ],
+      "source" : {
+        "isMouseInput" : true,
+        "readable" : "Left Mouse",
+        "isRepeat" : false,
+        "keyCode" : 0,
+        "type" : 1,
+        "modifiers" : [
+
+        ]
+      }
+    },
+    {
+      "times" : 1,
+      "appURL" : null,
+      "clickType" : "onClick",
+      "delaySeconds" : 5,
+      "type" : "keyboardOrMouse",
+      "source" : {
+        "modifiers" : [
+
+        ],
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "isMouseInput" : true,
+        "isRepeat" : false,
+        "keyCode" : 0
+      },
+      "imageURLs" : null,
+      "enabled" : true,
+      "name" : "Step 2",
+      "text" : "",
+      "point" : [
+        551.125,
+        652.3359375
+      ],
+      "id" : "A8317136-FEDD-4BBD-987F-CD4416DA46FE",
+      "delay" : null
+    },
+    {
+      "delaySeconds" : 10,
+      "clickType" : "onClick",
+      "source" : {
+        "isMouseInput" : true,
+        "keyCode" : 0,
+        "type" : 1,
+        "readable" : "Left Mouse",
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false
+      },
+      "times" : 1,
+      "type" : "keyboardOrMouse",
+      "appURL" : null,
+      "delay" : null,
+      "name" : "Step 3",
+      "text" : "",
+      "enabled" : true,
+      "point" : [
+        334.61328125,
+        616.625
+      ],
+      "imageURLs" : null,
+      "id" : "B30E2561-3A06-4020-9542-4A82357F1D82"
+    },
+    {
+      "clickType" : "onClick",
+      "source" : {
+        "type" : 1,
+        "isMouseInput" : true,
+        "keyCode" : 0,
+        "readable" : "Left Mouse",
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false
+      },
+      "id" : "82DA0255-5136-4DA2-BA04-3B2B489CA8DA",
+      "delay" : null,
+      "text" : "",
+      "type" : "keyboardOrMouse",
+      "point" : [
+        536.74609375,
+        652.39453125
+      ],
+      "imageURLs" : null,
+      "delaySeconds" : 1,
+      "enabled" : true,
+      "name" : "Step 4",
+      "times" : 1,
+      "appURL" : null
+    },
+    {
+      "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
+      "clickType" : "onClick",
+      "source" : {
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false,
+        "isMouseInput" : true,
+        "keyCode" : 0
+      },
+      "times" : 1,
+      "point" : [
+        473.94921875,
+        613.06640625
+      ],
+      "delay" : null,
+      "appURL" : null,
+      "enabled" : true,
+      "imageURLs" : null,
+      "name" : "Step 5",
+      "type" : "keyboardOrMouse",
+      "text" : "",
+      "delaySeconds" : 50
+    },
+    {
+      "source" : {
+        "keyCode" : 0,
+        "type" : 1,
+        "modifiers" : [
+
+        ],
+        "isRepeat" : false,
+        "isMouseInput" : true,
+        "readable" : "Left Mouse"
+      },
+      "enabled" : true,
+      "type" : "keyboardOrMouse",
+      "appURL" : null,
+      "point" : [
+        551.125,
+        652.3359375
+      ],
+      "imageURLs" : null,
+      "name" : "Step 2",
+      "clickType" : "onClick",
+      "times" : 1,
+      "delay" : null,
+      "text" : "",
+      "delaySeconds" : 5,
+      "id" : "A8317136-FEDD-4BBD-987F-CD4416DA46FE"
+    },
+    {
+      "type" : "keyboardOrMouse",
+      "delay" : null,
+      "appURL" : null,
+      "times" : 1,
+      "name" : "Step 3",
+      "source" : {
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ],
+        "isMouseInput" : true,
+        "isRepeat" : false
+      },
+      "enabled" : true,
+      "delaySeconds" : 10,
+      "clickType" : "onClick",
+      "imageURLs" : null,
+      "point" : [
+        334.61328125,
+        616.625
+      ],
+      "text" : "",
+      "id" : "B30E2561-3A06-4020-9542-4A82357F1D82"
+    },
+    {
+      "id" : "82DA0255-5136-4DA2-BA04-3B2B489CA8DA",
+      "clickType" : "onClick",
+      "delaySeconds" : 1,
+      "text" : "",
+      "appURL" : null,
+      "source" : {
+        "modifiers" : [
+
+        ],
+        "isMouseInput" : true,
+        "isRepeat" : false,
+        "type" : 1,
+        "readable" : "Left Mouse",
+        "keyCode" : 0
+      },
+      "times" : 1,
+      "enabled" : true,
+      "name" : "Step 4",
+      "point" : [
+        536.74609375,
+        652.39453125
+      ],
+      "delay" : null,
+      "imageURLs" : null,
+      "type" : "keyboardOrMouse"
+    },
+    {
+      "delay" : null,
+      "type" : "keyboardOrMouse",
+      "name" : "Step 5",
+      "times" : 1,
+      "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
+      "text" : "",
+      "appURL" : null,
+      "source" : {
+        "readable" : "Left Mouse",
+        "type" : 1,
+        "keyCode" : 0,
+        "modifiers" : [
+
+        ],
+        "isMouseInput" : true,
+        "isRepeat" : false
+      },
+      "enabled" : true,
+      "imageURLs" : null,
+      "clickType" : "onClick",
+      "point" : [
+        473.94921875,
+        613.06640625
+      ],
+      "delaySeconds" : 50
+    },
+    {
+      "imageURLs" : null,
+      "name" : "Step 22",
+      "clickType" : "onClick",
+      "point" : [
+        56.71484375,
+        824.6484375
+      ],
+      "delay" : null,
+      "type" : "keyboardOrMouse",
+      "id" : "9F6D8D5E-73FF-48FC-A439-35EBE6E8BA05",
+      "source" : {
+        "type" : 1,
+        "modifiers" : [
+
+        ],
+        "isMouseInput" : true,
+        "isRepeat" : false,
+        "keyCode" : 0,
+        "readable" : "Left Mouse"
+      },
+      "times" : 1,
+      "delaySeconds" : 1,
+      "text" : "",
+      "enabled" : true,
+      "appURL" : null
+    }
+  ],
+  "delayStart" : {
+    "interval" : 1,
+    "unit" : "seconds"
+  },
+  "name" : "AutoTest2",
+  "id" : "0ADE5D4C-BC0C-49DA-B882-BAB56747ACE1",
+  "createAt" : 739462687.381814
+}

@@ -3411,7 +3411,7 @@ class Log {
       DateTime today = DateTime.now();
       String dateSlug =
           "${today.year.toString()}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')} ${today.hour.toString().padLeft(2, '0')}:${today.minute.toString().padLeft(2, '0')}:${today.second.toString().padLeft(2, '0')}";
-      final logFile = File('/Users/rustdesk/workspace/rust/rustdesk/logs/${startTime}_${kWindowId == null ? 'main' : 'remote'}.txt');
+      final logFile = File('~/workspace/rust/rustdesk/logs/${startTime}_${kWindowId == null ? 'main' : 'remote'}.txt');
       if (stackTrace != null) {
         CustomTrace customTrace = CustomTrace(stackTrace);
         logFile.writeAsStringSync(
