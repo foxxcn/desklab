@@ -1,5 +1,5 @@
 {
-  "times" : 1,
+  "times" : 999999,
   "steps" : [
     {
       "enabled" : true,
@@ -74,8 +74,8 @@
       "id" : "B30E2561-3A06-4020-9542-4A82357F1D82",
       "delaySeconds" : 10,
       "point" : [
-        334.61328125,
-        616.625
+        1162.59,
+        793.42
       ],
       "text" : ""
     },
@@ -102,8 +102,8 @@
       "type" : "keyboardOrMouse",
       "clickType" : "onClick",
       "point" : [
-        536.74609375,
-        652.39453125
+        1371.03,
+        831.79
       ]
     },
     {
@@ -127,8 +127,8 @@
       "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
       "enabled" : true,
       "point" : [
-        473.94921875,
-        613.06640625
+        1307.26,
+        792.82
       ],
       "clickType" : "onClick",
       "name" : "Step 5"
@@ -172,8 +172,8 @@
       "type" : "keyboardOrMouse",
       "id" : "B30E2561-3A06-4020-9542-4A82357F1D82",
       "point" : [
-        334.61328125,
-        616.625
+        1162.59,
+        793.42
       ],
       "source" : {
         "type" : 1,
@@ -191,8 +191,8 @@
       "delay" : null,
       "times" : 1,
       "point" : [
-        536.74609375,
-        652.39453125
+        1371.03,
+        831.79
       ],
       "type" : "keyboardOrMouse",
       "clickType" : "onClick",
@@ -224,8 +224,8 @@
       "delay" : null,
       "delaySeconds" : 50,
       "point" : [
-        473.94921875,
-        613.06640625
+        1307.26,
+        792.82
       ],
       "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
       "enabled" : true,
@@ -272,8 +272,8 @@
       "clickType" : "onClick",
       "type" : "keyboardOrMouse",
       "point" : [
-        334.61328125,
-        616.625
+        1162.59,
+        793.42
       ],
       "delay" : null,
       "id" : "B30E2561-3A06-4020-9542-4A82357F1D82",
@@ -316,8 +316,8 @@
       "delaySeconds" : 1,
       "delay" : null,
       "point" : [
-        536.74609375,
-        652.39453125
+        1371.03,
+        831.79
       ],
       "id" : "82DA0255-5136-4DA2-BA04-3B2B489CA8DA",
       "clickType" : "onClick"
@@ -335,8 +335,8 @@
       "delaySeconds" : 50,
       "name" : "Step 5",
       "point" : [
-        473.94921875,
-        613.06640625
+        1307.26,
+        792.82
       ],
       "source" : {
         "isMouseInput" : true,
@@ -397,8 +397,8 @@
       "text" : "",
       "enabled" : true,
       "point" : [
-        334.61328125,
-        616.625
+        1162.59,
+        793.42
       ],
       "imageURLs" : null,
       "id" : "B30E2561-3A06-4020-9542-4A82357F1D82"
@@ -420,8 +420,8 @@
       "text" : "",
       "type" : "keyboardOrMouse",
       "point" : [
-        536.74609375,
-        652.39453125
+        1371.03,
+        831.79
       ],
       "imageURLs" : null,
       "delaySeconds" : 1,
@@ -445,8 +445,8 @@
       },
       "times" : 1,
       "point" : [
-        473.94921875,
-        613.06640625
+        1307.26,
+        792.82
       ],
       "delay" : null,
       "appURL" : null,
@@ -505,8 +505,8 @@
       "clickType" : "onClick",
       "imageURLs" : null,
       "point" : [
-        334.61328125,
-        616.625
+        1162.59,
+        793.42
       ],
       "text" : "",
       "id" : "B30E2561-3A06-4020-9542-4A82357F1D82"
@@ -531,8 +531,8 @@
       "enabled" : true,
       "name" : "Step 4",
       "point" : [
-        536.74609375,
-        652.39453125
+        1371.03,
+        831.79
       ],
       "delay" : null,
       "imageURLs" : null,
@@ -560,8 +560,8 @@
       "imageURLs" : null,
       "clickType" : "onClick",
       "point" : [
-        473.94921875,
-        613.06640625
+        1307.26,
+        792.82
       ],
       "delaySeconds" : 50
     },

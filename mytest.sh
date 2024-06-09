@@ -2,8 +2,8 @@
 
 # 20240605173702 - 3
 
-# cd /Users/rustdesk/workspace/rust/rustdesk/flutter/build/macos/Build/Products/Debug/RustDesk.app/Contents/MacOS/logs
-# grep '_RemotePageState constructor, ffi start end' * | awk -F ':' '{print $1}' | sort | uniq -c
+# cd ~/workspace/rust/rustdesk/logs
+# grep '_RemotePageState constructor, ffi start end' *_remote.txt | awk -F ':' '{print $1}' | sort | uniq -c
 
 mkdir logs
 
