@@ -216,6 +216,7 @@ pub fn is_active_and_seat0(sid: &str) -> bool {
 // **Note** that the return value here, the last character is '\n'.
 // Use `run_cmds_trim_newline()` if you want to remove '\n' at the end.
 pub fn run_cmds(cmds: &str) -> ResultType<String> {
+    log::info!("REMOVE ME ======================== run_cmds: {}", cmds);
     let output = std::process::Command::new("sh")
         .args(vec!["-c", cmds])
         .output()?;
@@ -223,6 +224,7 @@ pub fn run_cmds(cmds: &str) -> ResultType<String> {
 }
 
 pub fn run_cmds_trim_newline(cmds: &str) -> ResultType<String> {
+    log::info!("REMOVE ME ======================== run_cmds_trim_newline: {}", cmds);
     let output = std::process::Command::new("sh")
         .args(vec!["-c", cmds])
         .output()?;
@@ -240,6 +242,7 @@ fn run_loginctl(args: Option<Vec<&str>>) -> std::io::Result<std::process::Output
         if let Some(a) = args.as_ref() {
             l_args = format!("{} {}", l_args, a.join(" "));
         }
+        log::info!("REMOVE ME ======================== run_loginctl, flatpak-spawn: {:?}", l_args);
         let res = std::process::Command::new("flatpak-spawn")
             .args(vec![String::from("--host"), l_args])
             .output();
@@ -249,8 +252,10 @@ fn run_loginctl(args: Option<Vec<&str>>) -> std::io::Result<std::process::Output
     }
     let mut cmd = std::process::Command::new("loginctl");
     if let Some(a) = args {
+        log::info!("REMOVE ME ======================== run_loginctl, arg: {:?}", &a);
         return cmd.args(a).output();
     }
+    log::info!("REMOVE ME ======================== run_loginctl");
     cmd.output()
 }
 

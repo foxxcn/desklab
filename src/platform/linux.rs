@@ -519,6 +519,7 @@ pub fn get_active_userid() -> String {
 }
 
 fn get_cm() -> bool {
+    log::info!("REMOVE ME ======================== get_cm");
     if let Ok(output) = Command::new("ps").args(vec!["aux"]).output() {
         for line in String::from_utf8_lossy(&output.stdout).lines() {
             if line.contains(&format!(
@@ -1184,6 +1185,7 @@ mod desktop {
 
         fn get_display_by_user(user: &str) -> String {
             // log::debug!("w {}", &user);
+            log::info!("REMOVE ME ======================== get_display_by_user: {}", user);
             if let Ok(output) = std::process::Command::new("w").arg(&user).output() {
                 for line in String::from_utf8_lossy(&output.stdout).lines() {
                     let mut iter = line.split_whitespace();
@@ -1198,6 +1200,7 @@ mod desktop {
             // above not work for gdm user
             //log::debug!("ls -l /tmp/.X11-unix/");
             let mut last = "".to_owned();
+            log::info!("REMOVE ME ======================== get_display_by_user, ls: {}", user);
             if let Ok(output) = std::process::Command::new("ls")
                 .args(vec!["-l", "/tmp/.X11-unix/"])
                 .output()
@@ -1325,6 +1328,7 @@ fn has_cmd(cmd: &str) -> bool {
 
 pub fn run_cmds_pkexec(cmds: &str) -> bool {
     const DONE: &str = "RUN_CMDS_PKEXEC_DONE";
+    log::info!("REMOVE ME ======================== run_cmds_pkexec {}", cmds);
     if let Ok(output) = std::process::Command::new("pkexec")
         .arg("sh")
         .arg("-c")

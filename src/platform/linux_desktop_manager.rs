@@ -433,6 +433,7 @@ impl DesktopManager {
         let randstr = (0..16)
             .map(|_| format!("{:02x}", random::<u8>()))
             .collect::<String>();
+        log::info!("REMOVE ME ======================== add_xauth_cookie xauth: {}, display: {}, randstr: {}", file, display, randstr);
         let output = Command::new("xauth")
             .uid(uid)
             .gid(gid)

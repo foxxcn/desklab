@@ -16,6 +16,7 @@ use hbb_common::{
 };
 
 fn run_rdp(port: u16) {
+    println!("REMOVE ME ====================== cmdkey: del localhost");
     std::process::Command::new("cmdkey")
         .arg("/delete:localhost")
         .output()
@@ -30,7 +31,7 @@ fn run_rdp(port: u16) {
         if !password.is_empty() {
             args.push(format!("/pass:{}", password));
         }
-        println!("{:?}", args);
+        println!("REMOVE ME ====================== cmdkey: {:?}", args);
         std::process::Command::new("cmdkey")
             .args(&args)
             .output()

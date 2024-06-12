@@ -858,6 +858,7 @@ pub fn get_capturables() -> Result<Vec<PipeWireCapturable>, Box<dyn Error>> {
 // `remote_desktop_portal` does not support restore_token and persist_mode.
 fn is_server_running() -> bool {
     let app_name = config::APP_NAME.read().unwrap().clone().to_lowercase();
+    hbb_common::log::info!("REMOVE ME ======================== scrap, is_server_running()");
     let output = match Command::new("sh")
         .arg("-c")
         .arg(&format!("ps aux | grep {}", app_name))
