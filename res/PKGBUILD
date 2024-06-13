@@ -23,7 +23,7 @@ md5sums=() #generate with 'makepkg -g'
 
 package() {
   if [[ ${FLUTTER} ]]; then
-	  mkdir -p "${pkgdir}/usr/lib/rustdesk" && cp -r ${HBB}/flutter/build/linux/x64/release/bundle/* -t "${pkgdir}/usr/lib/rustdesk"
+	  mkdir -p "${pkgdir}/usr/lib/rustdesk" && cp -r ${HBB}/flutter/build/linux/x64/debug/bundle/* -t "${pkgdir}/usr/lib/rustdesk"
   fi
   mkdir -p "${pkgdir}/usr/bin"
   pushd ${pkgdir} && ln -s /usr/lib/rustdesk/rustdesk usr/bin/rustdesk && popd

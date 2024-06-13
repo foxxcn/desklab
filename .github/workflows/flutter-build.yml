@@ -1126,7 +1126,7 @@ jobs:
               export JOBS=""
             fi
             echo $JOBS
-            cargo build --lib $JOBS --features hwcodec,flutter --release
+            cargo build --lib $JOBS --features hwcodec,flutter
             rm -rf target/release/deps target/release/build
             rm -rf ~/.cargo
 
@@ -1137,9 +1137,9 @@ jobs:
             case ${{ matrix.job.arch }} in
               aarch64)
                 export PATH=/opt/flutter-elinux/bin:$PATH
-                sed -i "s/flutter build linux --release/flutter-elinux build linux --verbose/g" ./build.py
+                sed -i "s/flutter build linux --debug/flutter-elinux build linux --verbose/g" ./build.py
                 export ARCH=arm64
-                sed -i "s/x64\/release/arm64\/release/g" ./build.py
+                sed -i "s/x64\/debug/arm64\/debug/g" ./build.py
               ;;
               x86_64)
                 export PATH=/opt/flutter/bin:$PATH
