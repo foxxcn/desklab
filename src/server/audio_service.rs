@@ -167,7 +167,7 @@ mod cpal_impl {
         sp.snapshot(|_sps: ServiceSwap<_>| Ok(()))?;
         match &state.stream {
             None => {
-                state.stream = Some(play(&sp)?);
+                state.stream = Some(play(sp.clone())?);
             }
             _ => {}
         }
@@ -182,7 +182,7 @@ mod cpal_impl {
         sp.snapshot(|sps| {
             match &state.stream {
                 None => {
-                    state.stream = Some(play(&sp)?);
+                    state.stream = Some(play(sp.clone())?);
                 }
                 _ => {}
             }
@@ -202,16 +202,15 @@ mod cpal_impl {
         }
     }
 
-    fn send(
+    pub fn send(
         data: Vec<f32>,
         sample_rate0: u32,
         sample_rate: u32,
         device_channel: u16,
         encode_channel: u16,
         encoder: &mut Encoder,
-        sp: &GenericService,
+        cb: impl Fn(Arc<Message>),
     ) {
-        println!("REMOVE ME ============================== audio data size 111: {}", data.len());
         let mut data = data;
         if sample_rate0 != sample_rate {
             data = crate::common::audio_resample(&data, sample_rate0, sample_rate, device_channel);
@@ -225,16 +224,16 @@ mod cpal_impl {
                 encode_channel,
             )
         }
-        send_f32(&data, encoder, sp);
+        send_f32_cb(&data, encoder, cb);
     }
 
     #[cfg(windows)]
-    fn get_device() -> ResultType<(Device, SupportedStreamConfig)> {
+    fn get_device(host: &Host) -> ResultType<(Device, SupportedStreamConfig)> {
         let audio_input = super::get_audio_input();
         if !audio_input.is_empty() {
             return get_audio_input(&audio_input);
         }
-        let device = HOST
+        let device = host
             .default_output_device()
             .with_context(|| "Failed to get default output device for loopback")?;
         log::info!(
@@ -250,7 +249,7 @@ mod cpal_impl {
     }
 
     #[cfg(not(windows))]
-    fn get_device() -> ResultType<(Device, SupportedStreamConfig)> {
+    fn get_device(_host: &Host) -> ResultType<(Device, SupportedStreamConfig)> {
         let audio_input = super::get_audio_input();
         get_audio_input(&audio_input)
     }
@@ -281,10 +280,19 @@ mod cpal_impl {
         Ok((device, format))
     }
 
-    fn play(sp: &GenericService) -> ResultType<(Box<dyn StreamTrait>, Arc<Message>)> {
+    #[inline]
+    fn play(sp: EmptyExtraFieldService) -> ResultType<(Box<dyn StreamTrait>, Arc<Message>)> {
+        play_cb(&HOST, move |msg: Arc<Message>| {
+            sp.send_shared(msg);
+        })
+    }
+
+    pub fn play_cb(
+        host: &Host,
+        cb: impl Fn(Arc<Message>) + Send + 'static + Clone,
+    ) -> ResultType<(Box<dyn StreamTrait>, Arc<Message>)> {
         use cpal::SampleFormat::*;
-        let (device, config) = get_device()?;
-        let sp = sp.clone();
+        let (device, config) = get_device(host)?;
         // Sample rate must be one of 8000, 12000, 16000, 24000, or 48000.
         let sample_rate_0 = config.sample_rate().0;
         let sample_rate = if sample_rate_0 < 12000 {
@@ -300,16 +308,16 @@ mod cpal_impl {
         };
         let ch = if config.channels() > 1 { Stereo } else { Mono };
         let stream = match config.sample_format() {
-            I8 => build_input_stream::<i8>(device, &config, sp, sample_rate, ch)?,
-            I16 => build_input_stream::<i16>(device, &config, sp, sample_rate, ch)?,
-            I32 => build_input_stream::<i32>(device, &config, sp, sample_rate, ch)?,
-            I64 => build_input_stream::<i64>(device, &config, sp, sample_rate, ch)?,
-            U8 => build_input_stream::<u8>(device, &config, sp, sample_rate, ch)?,
-            U16 => build_input_stream::<u16>(device, &config, sp, sample_rate, ch)?,
-            U32 => build_input_stream::<u32>(device, &config, sp, sample_rate, ch)?,
-            U64 => build_input_stream::<u64>(device, &config, sp, sample_rate, ch)?,
-            F32 => build_input_stream::<f32>(device, &config, sp, sample_rate, ch)?,
-            F64 => build_input_stream::<f64>(device, &config, sp, sample_rate, ch)?,
+            I8 => build_input_stream::<i8>(device, &config, sample_rate, ch, cb)?,
+            I16 => build_input_stream::<i16>(device, &config, sample_rate, ch, cb)?,
+            I32 => build_input_stream::<i32>(device, &config, sample_rate, ch, cb)?,
+            I64 => build_input_stream::<i64>(device, &config, sample_rate, ch, cb)?,
+            U8 => build_input_stream::<u8>(device, &config, sample_rate, ch, cb)?,
+            U16 => build_input_stream::<u16>(device, &config, sample_rate, ch, cb)?,
+            U32 => build_input_stream::<u32>(device, &config, sample_rate, ch, cb)?,
+            U64 => build_input_stream::<u64>(device, &config, sample_rate, ch, cb)?,
+            F32 => build_input_stream::<f32>(device, &config, sample_rate, ch, cb)?,
+            F64 => build_input_stream::<f64>(device, &config, sample_rate, ch, cb)?,
             f => bail!("unsupported audio format: {:?}", f),
         };
         stream.play()?;
@@ -322,16 +330,13 @@ mod cpal_impl {
     fn build_input_stream<T>(
         device: cpal::Device,
         config: &cpal::SupportedStreamConfig,
-        sp: GenericService,
         sample_rate: u32,
         encode_channel: magnum_opus::Channels,
+        cb: impl Fn(Arc<Message>) + Send + 'static + Clone,
     ) -> ResultType<cpal::Stream>
     where
         T: cpal::SizedSample + dasp::sample::ToSample<f32>,
     {
-
-        log::info!("REMVE ME ======================== config: {:?}, sample_rate: {}, chnnel: {:?}", config, sample_rate, &encode_channel);
-
         let err_fn = move |err| {
             // too many UnknownErrno, will improve later
             log::trace!("an error occurred on stream: {}", err);
@@ -373,7 +378,7 @@ mod cpal_impl {
                         device_channel,
                         encode_channel as _,
                         &mut encoder,
-                        &sp,
+                        cb.clone(),
                     );
                 }
             },
@@ -383,6 +388,7 @@ mod cpal_impl {
         Ok(stream)
     }
 }
+pub use cpal_impl::play_cb as cpal_play_cb;
 
 fn create_format_msg(sample_rate: u32, channels: u16) -> Message {
     let format = AudioFormat {
@@ -403,7 +409,14 @@ fn create_format_msg(sample_rate: u32, channels: u16) -> Message {
 const MAX_AUDIO_ZERO_COUNT: u16 = 800;
 static mut AUDIO_ZERO_COUNT: u16 = 0;
 
+#[cfg(any(target_os = "linux", target_os = "android"))]
 fn send_f32(data: &[f32], encoder: &mut Encoder, sp: &GenericService) {
+    send_f32_cb(data, encoder, |msg: Arc<Message>| {
+        sp.send_shared(msg);
+    });
+}
+
+pub fn send_f32_cb(data: &[f32], encoder: &mut Encoder, cb: impl Fn(Arc<Message>)) {
     if data.iter().filter(|x| **x != 0.).next().is_some() {
         unsafe {
             AUDIO_ZERO_COUNT = 0;
@@ -450,8 +463,6 @@ fn send_f32(data: &[f32], encoder: &mut Encoder, sp: &GenericService) {
         }
     }
 
-    println!("REMOVE ME ============================== audio data size: {}", data.len());
-
     #[cfg(not(target_os = "android"))]
     match encoder.encode_vec_float(data, data.len() * 6) {
         Ok(data) => {
@@ -460,11 +471,10 @@ fn send_f32(data: &[f32], encoder: &mut Encoder, sp: &GenericService) {
                 data: data.into(),
                 ..Default::default()
             });
-            sp.send(msg_out);
-            println!("REMOVE ME ============================== audio msg");
+            cb(Arc::new(msg_out));
         }
         Err(e) => {
-          //  println!("REMOVE ME ============================== encode failed: {:?}", e);
+            log::debug!("Failed to encode audio: {}", e);
         }
     }
 }

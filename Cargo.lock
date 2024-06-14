@@ -250,7 +250,7 @@ dependencies = [
  "bindgen 0.69.4",
  "cc",
  "num-derive 0.4.2",
- "num-traits 0.2.17",
+ "num-traits 0.2.19",
  "parse_cfg",
  "walkdir",
 ]
@@ -595,34 +595,14 @@ dependencies = [
  "itertools 0.12.1",
  "lazy_static",
  "lazycell",
+ "log",
+ "prettyplease",
  "proc-macro2 1.0.86",
  "quote 1.0.36",
  "regex",
  "rustc-hash",
  "shlex",
  "syn 2.0.68",
-]
-
-[[package]]
-name = "bindgen"
-version = "0.69.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a00dc851838a2120612785d195287475a3ac45514741da670b735818822129a0"
-dependencies = [
- "bitflags 2.4.1",
- "cexpr",
- "clang-sys",
- "itertools 0.12.1",
- "lazy_static",
- "lazycell",
- "log",
- "prettyplease",
- "proc-macro2 1.0.79",
- "quote 1.0.35",
- "regex",
- "rustc-hash",
- "shlex",
- "syn 2.0.55",
  "which",
 ]
 
@@ -1311,6 +1291,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "873dab07c8f743075e57f524c583985fbaf745602acbe916a01539364369a779"
 dependencies = [
  "alsa",
+ "asio-sys",
  "core-foundation-sys 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "coreaudio-rs",
  "dasp_sample",
@@ -1320,7 +1301,7 @@ dependencies = [
  "mach2",
  "ndk 0.8.0",
  "ndk-context",
- "num-traits 0.2.17",
+ "num-traits 0.2.19",
  "oboe",
  "wasm-bindgen",
  "wasm-bindgen-futures",
