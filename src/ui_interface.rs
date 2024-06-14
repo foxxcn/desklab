@@ -600,17 +600,25 @@ pub fn get_error() -> String {
     #[cfg(not(any(feature = "cli")))]
     #[cfg(target_os = "linux")]
     {
+        log::info!("REMOVE ME ====================== get_error(), try to get display server type");
         let dtype = crate::platform::linux::get_display_server();
+        log::info!("REMOVE ME ====================== get_error(), display server type: {}", &dtype);
         if crate::platform::linux::DISPLAY_SERVER_WAYLAND == dtype {
-            return crate::server::wayland::common_get_error();
+            log::info!("REMOVE ME ====================== wayland, try get error");
+            let a = crate::server::wayland::common_get_error();
+            log::info!("REMOVE ME ====================== wayland, get error: {}", &a);
+            return a;
         }
         if dtype != crate::platform::linux::DISPLAY_SERVER_X11 {
-            return format!(
+            log::info!("REMOVE ME ====================== Unsupported display server: {}", &dtype);
+            let a = format!(
                 "{} {}, {}",
                 crate::client::translate("Unsupported display server".to_owned()),
                 dtype,
                 crate::client::translate("x11 expected".to_owned()),
             );
+            log::info!("REMOVE ME ====================== Unsupported display server: {}", &a);
+            return a;
         }
     }
     return "".to_owned();

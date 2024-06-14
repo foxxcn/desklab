@@ -49,17 +49,26 @@ pub fn is_x11_or_headless() -> bool {
 const INVALID_SESSION: &str = "4294967295";
 
 pub fn get_display_server() -> String {
+    log::info!("REMOVE ME ====================== get_display_server, try get var RUSTDESK_FORCED_DISPLAY_SERVER ");
+
     // Check for forced display server environment variable first
     if let Ok(forced_display) = std::env::var("RUSTDESK_FORCED_DISPLAY_SERVER") {
         return forced_display;
     }
 
+    log::info!("REMOVE ME ====================== get_display_server, run run_loginctl ");
+
     // Check if `loginctl` can be called successfully
     if run_loginctl(None).is_err() {
+        log::info!(
+            "REMOVE ME ====================== get_display_server, failed run loginctl, return x11 "
+        );
         return DISPLAY_SERVER_X11.to_owned();
     }
 
+    log::info!("REMOVE ME ====================== get_display_server, try get_values_of_seat0 ");
     let mut session = get_values_of_seat0(&[0])[0].clone();
+    log::info!("REMOVE ME ====================== get_display_server, try get_values_of_seat0, session: {} ", &session);
     if session.is_empty() {
         // loginctl has not given the expected output.  try something else.
         if let Ok(sid) = std::env::var("XDG_SESSION_ID") {
@@ -67,22 +76,30 @@ pub fn get_display_server() -> String {
             session = sid;
         }
         if session.is_empty() {
+            log::info!("REMOVE ME ====================== get_display_server, session is empty, try run `cat /proc/self/sessionid` ");
             session = run_cmds("cat /proc/self/sessionid").unwrap_or_default();
+            log::info!("REMOVE ME ====================== get_display_server, session is empty, get output of `cat /proc/self/sessionid` ");
             if session == INVALID_SESSION {
                 session = "".to_owned();
             }
         }
     }
     if session.is_empty() {
+        log::info!("REMOVE ME ====================== get_display_server, session is still empty, return env XDG_SESSION_TYPE or x11  ");
         std::env::var("XDG_SESSION_TYPE").unwrap_or("x11".to_owned())
     } else {
-        get_display_server_of_session(&session)
+        log::info!("REMOVE ME ====================== get_display_server, session is not empty, try get_display_server_of_session  ");
+        let a = get_display_server_of_session(&session);
+        log::info!("REMOVE ME ====================== get_display_server, session is not empty, get_display_server_of_session returns: {} ", &a);
+        return a;
     }
 }
 
 pub fn get_display_server_of_session(session: &str) -> String {
-    let mut display_server = if let Ok(output) =
-        run_loginctl(Some(vec!["show-session", "-p", "Type", session]))
+    log::info!("REMOVE ME ====================== get_display_server_of_session, run loginctl show-session -p Type {} ", &session);
+    let t = run_loginctl(Some(vec!["show-session", "-p", "Type", session]));
+    log::info!("REMOVE ME ====================== get_display_server_of_session, run loginctl show-session -p Type, get result ");
+    let mut display_server = if let Ok(output) = t
     // Check session type of the session
     {
         let display_server = String::from_utf8_lossy(&output.stdout)
@@ -91,14 +108,20 @@ pub fn get_display_server_of_session(session: &str) -> String {
             .into();
         if display_server == "tty" {
             // If the type is tty...
-            if let Ok(output) = run_loginctl(Some(vec!["show-session", "-p", "TTY", session]))
+            log::info!("REMOVE ME ====================== get_display_server_of_session, display_server is tty ");
+            let x = run_loginctl(Some(vec!["show-session", "-p", "TTY", session]));
+            log::info!("REMOVE ME ====================== get_display_server_of_session, display_server is tty, get tty ");
+            if let Ok(output) = x
             // Get the tty number
             {
                 let tty: String = String::from_utf8_lossy(&output.stdout)
                     .replace("TTY=", "")
                     .trim_end()
                     .into();
-                if let Ok(xorg_results) = run_cmds(&format!("ps -e | grep \"{tty}.\\\\+Xorg\""))
+                log::info!("REMOVE ME ====================== get_display_server_of_session, try get Xorg ");
+                let b = run_cmds(&format!("ps -e | grep \"{tty}.\\\\+Xorg\""));
+                log::info!("REMOVE ME ====================== get_display_server_of_session, try get Xorg, get result ");
+                if let Ok(xorg_results) = b
                 // And check if Xorg is running on that tty
                 {
                     if xorg_results.trim_end() != "" {
@@ -148,14 +171,21 @@ fn ignore_loginctl_line(line: &str) -> bool {
 }
 
 fn _get_values_of_seat0(indices: &[usize], ignore_gdm_wayland: bool) -> Vec<String> {
+    log::info!("REMOVE ME ====================== _get_values_of_seat0, try run_loginctl ");
     if let Ok(output) = run_loginctl(None) {
+        log::info!(
+            "REMOVE ME ====================== _get_values_of_seat0, try run_loginctl output "
+        );
         for line in String::from_utf8_lossy(&output.stdout).lines() {
             if ignore_loginctl_line(line) {
                 continue;
             }
             if line.contains("seat0") {
                 if let Some(sid) = line.split_whitespace().next() {
-                    if is_active(sid) {
+                    log::info!("REMOVE ME ====================== _get_values_of_seat0, is_active ");
+                    let t = is_active(sid);
+                    log::info!("REMOVE ME ====================== _get_values_of_seat0, is_active, returns: {} ", &t);
+                    if t {
                         if ignore_gdm_wayland {
                             if is_gdm_user(line.split_whitespace().nth(2).unwrap_or(""))
                                 && get_display_server_of_session(sid) == DISPLAY_SERVER_WAYLAND
@@ -216,16 +246,22 @@ pub fn is_active_and_seat0(sid: &str) -> bool {
 // **Note** that the return value here, the last character is '\n'.
 // Use `run_cmds_trim_newline()` if you want to remove '\n' at the end.
 pub fn run_cmds(cmds: &str) -> ResultType<String> {
+    log::info!("REMOVE ME ========================= run_cmds, run sh -c {:?} ", &cmds);
     let output = std::process::Command::new("sh")
         .args(vec!["-c", cmds])
-        .output()?;
+        .output();
+    log::info!("REMOVE ME ========================= run_cmds, run sh -c, get output ");
+    let output = output?;
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 pub fn run_cmds_trim_newline(cmds: &str) -> ResultType<String> {
+    log::info!("REMOVE ME ========================= run_cmds_trim_newline, run sh -c {:?} ", &cmds);
     let output = std::process::Command::new("sh")
         .args(vec!["-c", cmds])
-        .output()?;
+        .output();
+    log::info!("REMOVE ME ========================= run_cmds_trim_newline, run sh -c, get output ");
+    let output = output?;
     let out = String::from_utf8_lossy(&output.stdout);
     Ok(if out.ends_with('\n') {
         out[..out.len() - 1].to_string()
@@ -240,18 +276,42 @@ fn run_loginctl(args: Option<Vec<&str>>) -> std::io::Result<std::process::Output
         if let Some(a) = args.as_ref() {
             l_args = format!("{} {}", l_args, a.join(" "));
         }
+        let args2 = vec![String::from("--host"), l_args];
+        log::info!(
+            "REMOVE ME ====================== run_loginctl, run flatpak-spawn, {:?} ",
+            &args2
+        );
         let res = std::process::Command::new("flatpak-spawn")
-            .args(vec![String::from("--host"), l_args])
+            .args(&args2)
             .output();
+        log::info!(
+            "REMOVE ME ====================== run_loginctl, run flatpak-spawn, res, {:?} ",
+            &res
+        );
         if res.is_ok() {
             return res;
         }
     }
     let mut cmd = std::process::Command::new("loginctl");
     if let Some(a) = args {
-        return cmd.args(a).output();
+        log::info!(
+            "REMOVE ME ====================== run_loginctl, loginctl, with args: {:?} ",
+            &a
+        );
+        let x = cmd.args(a).output();
+        log::info!(
+            "REMOVE ME ====================== run_loginctl, loginctl, with args, res: {:?} ",
+            &x
+        );
+        return x;
     }
-    cmd.output()
+    log::info!("REMOVE ME ====================== run_loginctl, loginctl, without args ");
+    let a = cmd.output();
+    log::info!(
+        "REMOVE ME ====================== run_loginctl, loginctl, without args, res: {:?} ",
+        &a
+    );
+    a
 }
 
 /// forever: may not work
