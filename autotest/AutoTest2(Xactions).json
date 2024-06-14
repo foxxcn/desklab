@@ -127,8 +127,8 @@
       "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
       "enabled" : true,
       "point" : [
-        1307.26,
-        792.82
+        980.85,
+        829.55
       ],
       "clickType" : "onClick",
       "name" : "Step 5"
@@ -224,8 +224,8 @@
       "delay" : null,
       "delaySeconds" : 50,
       "point" : [
-        1307.26,
-        792.82
+        980.85,
+        829.55
       ],
       "id" : "1675C06C-B3C8-4AFA-98F2-4903D5E2FA42",
       "enabled" : true,
@@ -335,8 +335,8 @@
       "delaySeconds" : 50,
       "name" : "Step 5",
       "point" : [
-        1307.26,
-        792.82
+        980.85,
+        829.55
       ],
       "source" : {
         "isMouseInput" : true,
@@ -445,8 +445,8 @@
       },
       "times" : 1,
       "point" : [
-        1307.26,
-        792.82
+        980.85,
+        829.55
       ],
       "delay" : null,
       "appURL" : null,
@@ -560,8 +560,8 @@
       "imageURLs" : null,
       "clickType" : "onClick",
       "point" : [
-        1307.26,
-        792.82
+        980.85,
+        829.55
       ],
       "delaySeconds" : 50
     },
