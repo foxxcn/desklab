@@ -9,6 +9,9 @@ on:
       upload-tag:
         type: string
         default: "nightly"
+      build-debug:
+        type: boolean
+        default: false
 
 env:
   WIN_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
@@ -34,14 +37,16 @@ env:
   API_SERVER: "${{ secrets.API_SERVER }}"
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
-
+  DEBUG_RELEASE: ${{ inputs.build-debug == true && 'debug' || 'release' }}
+  CARGO_DEBUG_RELEASE: ${{ inputs.build-debug == true && '' || '--release' }}
+  
 jobs:
   build-RustDeskTempTopMostWindow:
     uses: ./.github/workflows/third-party-RustDeskTempTopMostWindow.yml
     with:
       upload-artifact: ${{ inputs.upload-artifact }}
       target: windows-2022
-      configuration: Release
+      configuration: ${{ inputs.build-debug == true && 'Debug' || 'Release' }}
       platform: x64
       target_version: Windows10
     strategy:
@@ -258,7 +263,7 @@ jobs:
           # Patch sciter x86
           sed -i 's/branch = "dyn"/branch = "dyn_x86"/g' ./Cargo.toml
           cargo build --features inline,vram,hwcodec --release --bins
-          mkdir -p ./Release
+          mkdir -p ./${{ env.DEBUG_RELEASE }}
           mv ./target/release/rustdesk.exe ./Release/rustdesk.exe
           curl -LJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x32/sciter.dll
           echo "output_folder=./Release" >> $GITHUB_OUTPUT

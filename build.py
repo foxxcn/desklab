@@ -13,17 +13,39 @@ import sys
 windows = platform.platform().startswith('Windows')
 osx = platform.platform().startswith(
     'Darwin') or platform.platform().startswith("macOS")
-hbb_name = 'rustdesk' + ('.exe' if windows else '')
-exe_path = 'target/release/' + hbb_name
-if windows:
-    flutter_build_dir = 'build/windows/x64/runner/Release/'
-elif osx:
-    flutter_build_dir = 'build/macos/Build/Products/Release/'
-else:
-    flutter_build_dir = 'build/linux/x64/release/bundle/'
-flutter_build_dir_2 = f'flutter/{flutter_build_dir}'
+hbb_name = ''
+exe_path = ''
+flutter_build_dir = ''
+flutter_build_dir_2 = ''
 skip_cargo = False
+debug_release = ''
+cargo_debug_release = ''
 
+def prepare_global_vars(debug):
+    global debug_release
+    global cargo_debug_release
+    global exe_path
+    global flutter_build_dir
+    global flutter_build_dir_2
+
+    debug_release = 'debug' if debug else 'release'
+    cargo_debug_release = '--release' if not debug else ''
+    exe_path = f'target/{debug_release}/' + hbb_name
+    if windows:
+        flutter_build_dir = f'build/windows/x64/runner/{debug_release}/'
+    elif osx:
+        flutter_build_dir = f'build/macos/Build/Products/{debug_release}/'
+    else:
+        flutter_build_dir = f'build/linux/x64/{debug_release}/bundle/'
+    flutter_build_dir_2 = f'flutter/{flutter_build_dir}'
+
+def zip_directory(directory_path, zip_file_path):
+    with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(directory_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, directory_path)
+                zipf.write(file_path, arcname)
 
 def get_arch() -> str:
     custom_arch = os.environ.get("ARCH")
@@ -123,11 +145,6 @@ def make_parser():
         help='Enable feature vram, only available on windows now.'
     )
     parser.add_argument(
-        '--portable',
-        action='store_true',
-        help='Build windows portable'
-    )
-    parser.add_argument(
         '--unix-file-copy-paste',
         action='store_true',
         help='Build with unix file copy paste feature'
@@ -146,6 +163,11 @@ def make_parser():
     parser.add_argument(
         "--package",
         type=str
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Build debug version"
     )
     return parser
 
@@ -426,15 +448,17 @@ def build_flutter_arch_manjaro(version, features):
 
 
 def build_flutter_windows(version, features, skip_portable_pack):
+    global debug_release
+    global cargo_debug_release
     if not skip_cargo:
-        system2(f'cargo build --features {features} --lib --release')
-        if not os.path.exists("target/release/librustdesk.dll"):
+        system2(f'cargo build --features {features} --lib {cargo_debug_release}')
+        if not os.path.exists(f"target/{debug_release}/librustdesk.dll"):
             print("cargo build failed, please check rust source code.")
             exit(-1)
     os.chdir('flutter')
-    system2('flutter build windows --release')
+    system2(f'flutter build windows {cargo_debug_release}')
     os.chdir('..')
-    shutil.copy2('target/release/deps/dylib_virtual_display.dll',
+    shutil.copy2(f'target/{debug_release}/deps/dylib_virtual_display.dll',
                  flutter_build_dir_2)
     if skip_portable_pack:
         return
@@ -461,6 +485,11 @@ def main():
     parser = make_parser()
     args = parser.parse_args()
 
+    debug = args.debug
+    prepare_global_vars(debug)
+    global debug_release
+    global cargo_debug_release
+
     if os.path.exists(exe_path):
         os.unlink(exe_path)
     if os.path.isfile('/usr/bin/pacman'):
@@ -473,7 +502,6 @@ def main():
     print(args.skip_cargo)
     if args.skip_cargo:
         skip_cargo = True
-    portable = args.portable
     package = args.package
     if package:
         build_deb_from_folder(version, package)
@@ -483,16 +511,22 @@ def main():
     if windows:
         # build virtual display dynamic library
         os.chdir('libs/virtual_display/dylib')
-        system2('cargo build --release')
+        system2(f'cargo build {cargo_debug_release}')
         os.chdir('../../..')
 
         if flutter:
-            build_flutter_windows(version, features, args.skip_portable_pack)
+            skip_portable_pack = args.skip_portable_pack or debug
+            build_flutter_windows(version, features, skip_portable_pack)
+            if debug:
+                system2(f'cd {flutter_build_dir_2}/..')
+                dir_name = f'rustdesk-{version}-debug'
+                system2(f'mv debug {dir_name}')
+                zip_directory(dir_name, f'{dir_name}.zip')
             return
-        system2('cargo build --release --features ' + features)
+        system2(f'cargo build {cargo_debug_release} --features ' + features)
         # system2('upx.exe target/release/rustdesk.exe')
-        system2('mv target/release/rustdesk.exe target/release/RustDesk.exe')
-        pa = os.environ.get('P')
+        system2(f'mv target/{debug_release}/rustdesk.exe target/{debug_release}/RustDesk.exe')
+        pa = os.environ.get('P') if not debug else None
         if pa:
             # https://certera.com/kb/tutorial-guide-for-safenet-authentication-client-for-code-signing/
             system2(
@@ -500,13 +534,17 @@ def main():
                 'target\\release\\rustdesk.exe')
         else:
             print('Not signed')
-        system2(
-            f'cp -rf target/release/RustDesk.exe {res_dir}')
-        os.chdir('libs/portable')
-        system2('pip3 install -r requirements.txt')
-        system2(
-            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-win7-install.exe')
-        system2('mv ../../{res_dir}/rustdesk-{version}-win7-install.exe ../..')
+        if debug:
+            system2(
+                f'cp -rf target/{debug_release}/RustDesk.exe rustdesk-{version}-win7.exe')
+        else:
+            system2(
+                f'cp -rf target/{debug_release}/RustDesk.exe {res_dir}')
+            os.chdir('libs/portable')
+            system2('pip3 install -r requirements.txt')
+            system2(
+                f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-win7-install.exe')
+            system2('mv ../../{res_dir}/rustdesk-{version}-win7-install.exe ../..')
     elif os.path.isfile('/usr/bin/pacman'):
         # pacman -S -needed base-devel
         system2("sed -i 's/pkgver=.*/pkgver=%s/g' res/PKGBUILD" % version)
