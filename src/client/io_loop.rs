@@ -384,6 +384,9 @@ impl<T: InvokeUiSession> Remote<T> {
 
     // Start a voice call recorder, records audio and send to remote
     fn start_voice_call(&mut self) -> Option<std::sync::mpsc::Sender<()>> {
+        #[cfg(all(feature = "flutter", target_os = "linux"))]
+        std::thread::spawn(crate::ipc::start_pa);
+
         if self.handler.is_file_transfer() || self.handler.is_port_forward() {
             return None;
         }
