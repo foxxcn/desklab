@@ -867,7 +867,7 @@ class ImagePaint extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = Provider.of<ImageModel>(context);
     final c = Provider.of<CanvasModel>(context);
-    final adjust = gFFI.cursorModel.adjustForKeyboard;
+    final adjust = gFFI.cursorModel.adjustForKeyboard();
     var s = c.scale;
     return CustomPaint(
       painter: ImagePainter(
@@ -881,7 +881,7 @@ class CursorPaint extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = Provider.of<CursorModel>(context);
     final c = Provider.of<CanvasModel>(context);
-    final adjust = gFFI.cursorModel.adjustForKeyboard;
+    final adjust = gFFI.cursorModel.adjustForKeyboard();
     var s = c.scale;
     double hotx = m.hotx;
     double hoty = m.hoty;

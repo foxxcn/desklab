@@ -1810,8 +1810,7 @@ class CursorModel with ChangeNotifier {
   // `lastIsBlocked` is only used in common/widgets/remote_input.dart -> _RawTouchGestureDetectorRegionState -> onDoubleTap()
   // Because onDoubleTap() doesn't have the `event` parameter, we can't get the touch event's position.
   bool _lastIsBlocked = false;
-  // This is current adjust value for the touch mode.
-  double _adjustForKeyboard = 0.0;
+  double _yForKeyboardAdjust = 0;
 
   keyHelpToolsVisibilityChanged(Rect? r) {
     _keyHelpToolsRect = r;
@@ -1823,7 +1822,7 @@ class CursorModel with ChangeNotifier {
       // `lastIsBlocked` will be set when the cursor is moving or touch somewhere else.
       _lastIsBlocked = true;
     }
-    _updateAdjustForKeyboard();
+    _yForKeyboardAdjust = _y;
   }
 
   get lastIsBlocked => _lastIsBlocked;
@@ -1875,18 +1874,17 @@ class CursorModel with ChangeNotifier {
   get keyboardHeight => MediaQueryData.fromWindow(ui.window).viewInsets.bottom;
   get scale => parent.target?.canvasModel.scale ?? 1.0;
 
-  get adjustForKeyboard => _adjustForKeyboard;
-  _updateAdjustForKeyboard() {
-    print("REMOVE ME =========================== _updateAdjustForKeyboard keyboard size: $keyboardHeight");
-    if (keyboardHeight < 100) return 0;
+  double adjustForKeyboard() {
+    if (keyboardHeight < 100) {
+      return 0.0;
+    }
+
     final m = MediaQueryData.fromWindow(ui.window);
     final size = m.size;
     final thresh = (size.height - keyboardHeight) / 2;
-    final h =
-        (_y - getVisibleRect().top) * scale; // local physical display height
-    _adjustForKeyboard = h - thresh;
-    print("REMOVE ME =========================== _updateAdjustForKeyboard, _adjustForKeyboard: $_adjustForKeyboard, _y: $_y, getVisibleRect().top: ${getVisibleRect().top}, thresh: $thresh");
-    notifyListeners();
+    final h = (_yForKeyboardAdjust - getVisibleRect().top) *
+        scale; // local physical display height
+    return h - thresh;
   }
 
   // mobile Soft keyboard, block touch event from the KeyHelpTools
@@ -1909,8 +1907,8 @@ class CursorModel with ChangeNotifier {
       return false;
     }
     _lastIsBlocked = false;
+    moveLocal(x, y, adjust: adjustForKeyboard());
     parent.target?.inputModel.moveMouse(_x, _y);
-    moveLocal(x, y, adjust: _adjustForKeyboard);
     return true;
   }
 
