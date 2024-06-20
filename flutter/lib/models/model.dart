@@ -1829,8 +1829,7 @@ class CursorModel with ChangeNotifier {
       // `lastIsBlocked` will be set when the cursor is moving or touch somewhere else.
       _lastIsBlocked = true;
     }
-    _adjustForKeyboard = 0.0;
-    _adjustForKeyboard2 = 0.0;
+    _updateAdjustForKeyboard();
   }
 
   get lastIsBlocked => _lastIsBlocked;
