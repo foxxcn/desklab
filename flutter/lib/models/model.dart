@@ -1877,9 +1877,10 @@ class CursorModel with ChangeNotifier {
 
   get adjustForKeyboard => _adjustForKeyboard;
   _updateAdjustForKeyboard() {
+    print("REMOVE ME =========================== _updateAdjustForKeyboard keyboard size: $keyboardHeight");
+    if (keyboardHeight < 100) return 0;
     final m = MediaQueryData.fromWindow(ui.window);
     final size = m.size;
-    if (keyboardHeight < 100) return 0;
     final thresh = (size.height - keyboardHeight) / 2;
     final h =
         (_y - getVisibleRect().top) * scale; // local physical display height
