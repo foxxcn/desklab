@@ -1885,6 +1885,7 @@ class CursorModel with ChangeNotifier {
     final h =
         (_y - getVisibleRect().top) * scale; // local physical display height
     _adjustForKeyboard = h - thresh;
+    print("REMOVE ME =========================== _updateAdjustForKeyboard, _adjustForKeyboard: $_adjustForKeyboard, _y: $_y, getVisibleRect().top: ${getVisibleRect().top}, thresh: $thresh");
     notifyListeners();
   }
 
