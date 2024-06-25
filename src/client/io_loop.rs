@@ -88,6 +88,11 @@ impl<T: InvokeUiSession> Remote<T> {
         decode_fps: Arc<RwLock<HashMap<usize, usize>>>,
         chroma: Arc<RwLock<Option<Chroma>>>,
     ) -> Self {
+        log::info!("REMOVE ME =============================================== new remote 11");
+        let p1 = time::interval(SEC30);
+        log::info!("REMOVE ME =============================================== new remote 22");
+        let xx = crate::rustdesk_interval(p1);
+        log::info!("REMOVE ME =============================================== new remote 33");
         Self {
             handler,
             video_queue_map: video_queue,
@@ -98,7 +103,7 @@ impl<T: InvokeUiSession> Remote<T> {
             read_jobs: Vec::new(),
             write_jobs: Vec::new(),
             remove_jobs: Default::default(),
-            timer: crate::rustdesk_interval(time::interval(SEC30)),
+            timer: xx,
             last_update_jobs_status: (Instant::now(), Default::default()),
             is_connected: false,
             first_frame: false,
@@ -232,21 +237,21 @@ impl<T: InvokeUiSession> Remote<T> {
                            self.handle_local_clipboard_msg(&mut peer, _msg).await;
                            log::info!("REMOVE ME =============================================== rx clip client bbb");
                         }
-                        // _ = self.timer.tick() => {
-                        //     if last_recv_time.elapsed() >= SEC30 {
-                        //         self.handler.msgbox("error", "Connection Error", "Timeout", "");
-                        //         break;
-                        //     }
-                        //     if !self.read_jobs.is_empty() {
-                        //         if let Err(err) = fs::handle_read_jobs(&mut self.read_jobs, &mut peer).await {
-                        //             self.handler.msgbox("error", "Connection Error", &err.to_string(), "");
-                        //             break;
-                        //         }
-                        //         self.update_jobs_status();
-                        //     } else {
-                        //         self.timer = crate::rustdesk_interval(time::interval_at(Instant::now() + SEC30, SEC30));
-                        //     }
-                        // }
+                        _ = self.timer.tick() => {
+                            if last_recv_time.elapsed() >= SEC30 {
+                                self.handler.msgbox("error", "Connection Error", "Timeout", "");
+                                break;
+                            }
+                            if !self.read_jobs.is_empty() {
+                                if let Err(err) = fs::handle_read_jobs(&mut self.read_jobs, &mut peer).await {
+                                    self.handler.msgbox("error", "Connection Error", &err.to_string(), "");
+                                    break;
+                                }
+                                self.update_jobs_status();
+                            } else {
+                                self.timer = crate::rustdesk_interval(time::interval_at(Instant::now() + SEC30, SEC30));
+                            }
+                        }
                         _ = status_timer.tick() => {
                             log::info!("REMOVE ME =============================================== status tick aaa");
                             self.fps_control(direct);

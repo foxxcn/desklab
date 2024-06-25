@@ -1440,12 +1440,16 @@ pub struct ThrottledInterval {
 
 impl ThrottledInterval {
     pub fn new(i: Interval) -> ThrottledInterval {
+        log::info!("REMOVE ME ============================= ThrottledInterval::new 1");
         let period = i.period();
-        ThrottledInterval {
+        log::info!("REMOVE ME ============================= ThrottledInterval::new 2");
+        let t = ThrottledInterval {
             interval: i,
             last_tick: Instant::now() - period * 2,
             min_interval: Duration::from_secs_f64(period.as_secs_f64() * 0.9),
-        }
+        };
+        log::info!("REMOVE ME ============================= ThrottledInterval::new 3");
+        t
     }
 
     pub async fn tick(&mut self) -> Instant {
@@ -1454,19 +1458,24 @@ impl ThrottledInterval {
     }
 
     pub fn poll_tick(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Instant> {
+        log::info!("REMOVE ME ============================ poll_tick ");
         match self.interval.poll_tick(cx) {
             Poll::Ready(instant) => {
-                Poll::Ready(instant)
-                // if self.last_tick.elapsed() >= self.min_interval {
-                //     self.last_tick = Instant::now();
-                //     Poll::Ready(instant)
-                // } else {
-                //     // This call is required since tokio 1.27
-                //     cx.waker().wake_by_ref();
-                //     Poll::Pending
-                // }
+                if self.last_tick.elapsed() >= self.min_interval {
+                    self.last_tick = Instant::now();
+                    log::info!("REMOVE ME ============================ poll_tick ready ready");
+                    Poll::Ready(instant)
+                } else {
+                    // This call is required since tokio 1.27
+                    cx.waker().wake_by_ref();
+                    log::info!("REMOVE ME ============================ poll_tick ready pending");
+                    Poll::Pending
+                }
             }
-            Poll::Pending => Poll::Pending,
+            Poll::Pending => {
+                log::info!("REMOVE ME ============================ poll_tick pending");
+                Poll::Pending
+            },
         }
     }
 }
