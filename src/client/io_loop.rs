@@ -169,8 +169,7 @@ impl<T: InvokeUiSession> Remote<T> {
                 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
                 let mut rx_clip_client = rx_clip_client_lock.lock().await;
 
-                let mut status_timer =
-                    crate::rustdesk_interval(time::interval(Duration::new(1, 0)));
+                let mut status_timer = time::interval(Duration::new(1, 0));
                 let mut fps_instant = Instant::now();
 
                 loop {
