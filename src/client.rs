@@ -231,6 +231,7 @@ impl Client {
         debug_assert!(peer == interface.get_id());
         interface.update_direct(None);
         interface.update_received(false);
+        log::info!("REMOVE ME =============================================== io loop client _start begin");
         match Self::_start(peer, key, token, conn_type, interface).await {
             Err(err) => {
                 let err_str = err.to_string();
@@ -273,12 +274,15 @@ impl Client {
             ));
         }
 
+        log::info!("REMOVE ME =============================================== client _start 111");
+
         let other_server = interface.get_lch().read().unwrap().other_server.clone();
         let (peer, other_server, key, token) = if let Some((a, b, c)) = other_server.as_ref() {
             (a.as_ref(), b.as_ref(), c.as_ref(), "")
         } else {
             (peer, "", key, token)
         };
+        log::info!("REMOVE ME =============================================== client _start 222");
         let (mut rendezvous_server, servers, contained) = if other_server.is_empty() {
             crate::get_rendezvous_server(1_000).await
         } else {
@@ -295,9 +299,11 @@ impl Client {
                 (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
             }
         };
+        log::info!("REMOVE ME =============================================== client _start 333");
 
         let mut socket = socket_client::connect_tcp(&*rendezvous_server, CONNECT_TIMEOUT).await;
         debug_assert!(!servers.contains(&rendezvous_server));
+        log::info!("REMOVE ME =============================================== client _start 444");
         if socket.is_err() && !servers.is_empty() {
             log::info!("try the other servers: {:?}", servers);
             for server in servers {
@@ -312,6 +318,7 @@ impl Client {
         } else if !contained {
             crate::refresh_rendezvous_server();
         }
+        log::info!("REMOVE ME =============================================== client _start 555");
         log::info!("rendezvous server: {}", rendezvous_server);
         let mut socket = socket?;
         let my_addr = socket.local_addr();
@@ -322,6 +329,7 @@ impl Client {
             // mainly for the security of token
             allow_err!(secure_tcp(&mut socket, key).await);
         }
+        log::info!("REMOVE ME =============================================== client _start 666");
 
         let start = std::time::Instant::now();
         let mut peer_addr = Config::get_any_listen_addr(true);

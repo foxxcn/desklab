@@ -1456,14 +1456,15 @@ impl ThrottledInterval {
     pub fn poll_tick(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Instant> {
         match self.interval.poll_tick(cx) {
             Poll::Ready(instant) => {
-                if self.last_tick.elapsed() >= self.min_interval {
-                    self.last_tick = Instant::now();
-                    Poll::Ready(instant)
-                } else {
-                    // This call is required since tokio 1.27
-                    cx.waker().wake_by_ref();
-                    Poll::Pending
-                }
+                Poll::Ready(instant)
+                // if self.last_tick.elapsed() >= self.min_interval {
+                //     self.last_tick = Instant::now();
+                //     Poll::Ready(instant)
+                // } else {
+                //     // This call is required since tokio 1.27
+                //     cx.waker().wake_by_ref();
+                //     Poll::Pending
+                // }
             }
             Poll::Pending => Poll::Pending,
         }

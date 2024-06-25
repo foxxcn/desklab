@@ -29,7 +29,7 @@ use hbb_common::{
     tokio::{
         self,
         sync::mpsc,
-        time::{self, Duration, Instant},
+        time::{self, Duration, Instant, Interval},
     },
     Stream,
 };
@@ -125,6 +125,8 @@ impl<T: InvokeUiSession> Remote<T> {
             ConnType::default()
         };
 
+        log::info!("REMOVE ME =============================================== io loop client start 11");
+
         match Client::start(
             &self.handler.get_id(),
             key,
@@ -135,6 +137,7 @@ impl<T: InvokeUiSession> Remote<T> {
         .await
         {
             Ok((mut peer, direct, pk)) => {
+                log::info!("REMOVE ME =============================================== 111");
                 self.handler
                     .connection_round_state
                     .lock()
@@ -147,6 +150,8 @@ impl<T: InvokeUiSession> Remote<T> {
                         .set_fingerprint(crate::common::pk_to_fingerprint(pk.unwrap_or_default()));
                 }
 
+                log::info!("REMOVE ME =============================================== 222");
+
                 // just build for now
                 #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
                 let (_tx_holder, mut rx_clip_client) = mpsc::unbounded_channel::<i32>();
@@ -155,6 +160,7 @@ impl<T: InvokeUiSession> Remote<T> {
                 let (_tx_holder, rx) = mpsc::unbounded_channel();
                 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
                 let mut rx_clip_client_lock = Arc::new(TokioMutex::new(rx));
+                log::info!("REMOVE ME =============================================== 333");
                 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
                 {
                     let is_conn_not_default = self.handler.is_file_transfer()
@@ -166,16 +172,21 @@ impl<T: InvokeUiSession> Remote<T> {
                             clipboard::get_rx_cliprdr_client(&self.handler.get_id());
                     };
                 }
+                log::info!("REMOVE ME =============================================== 444");
                 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
                 let mut rx_clip_client = rx_clip_client_lock.lock().await;
+                log::info!("REMOVE ME =============================================== aaa");
 
                 let mut status_timer =
                     crate::rustdesk_interval(time::interval(Duration::new(1, 0)));
                 let mut fps_instant = Instant::now();
 
+                log::info!("REMOVE ME =============================================== aaa");
+
                 loop {
                     tokio::select! {
                         res = peer.next() => {
+                            log::info!("REMOVE ME =============================================== from peer aaa");
                             if let Some(res) = res {
                                 match res {
                                     Err(err) => {
@@ -189,9 +200,12 @@ impl<T: InvokeUiSession> Remote<T> {
                                             self.handler.update_received(true);
                                         }
                                         self.data_count.fetch_add(bytes.len(), Ordering::Relaxed);
+                                        log::info!("REMOVE ME =============================================== from peer bbb");
                                         if !self.handle_msg_from_peer(bytes, &mut peer).await {
+                                            log::info!("REMOVE ME =============================================== from peer xxx");
                                             break
                                         }
+                                        log::info!("REMOVE ME =============================================== from peer ccc");
                                     }
                                 }
                             } else {
@@ -213,28 +227,32 @@ impl<T: InvokeUiSession> Remote<T> {
                             }
                         }
                         _msg = rx_clip_client.recv() => {
+                            log::info!("REMOVE ME =============================================== rx clip client aaa");
                             #[cfg(any(target_os="windows", target_os="linux", target_os = "macos"))]
                            self.handle_local_clipboard_msg(&mut peer, _msg).await;
+                           log::info!("REMOVE ME =============================================== rx clip client bbb");
                         }
-                        _ = self.timer.tick() => {
-                            if last_recv_time.elapsed() >= SEC30 {
-                                self.handler.msgbox("error", "Connection Error", "Timeout", "");
-                                break;
-                            }
-                            if !self.read_jobs.is_empty() {
-                                if let Err(err) = fs::handle_read_jobs(&mut self.read_jobs, &mut peer).await {
-                                    self.handler.msgbox("error", "Connection Error", &err.to_string(), "");
-                                    break;
-                                }
-                                self.update_jobs_status();
-                            } else {
-                                self.timer = crate::rustdesk_interval(time::interval_at(Instant::now() + SEC30, SEC30));
-                            }
-                        }
+                        // _ = self.timer.tick() => {
+                        //     if last_recv_time.elapsed() >= SEC30 {
+                        //         self.handler.msgbox("error", "Connection Error", "Timeout", "");
+                        //         break;
+                        //     }
+                        //     if !self.read_jobs.is_empty() {
+                        //         if let Err(err) = fs::handle_read_jobs(&mut self.read_jobs, &mut peer).await {
+                        //             self.handler.msgbox("error", "Connection Error", &err.to_string(), "");
+                        //             break;
+                        //         }
+                        //         self.update_jobs_status();
+                        //     } else {
+                        //         self.timer = crate::rustdesk_interval(time::interval_at(Instant::now() + SEC30, SEC30));
+                        //     }
+                        // }
                         _ = status_timer.tick() => {
+                            log::info!("REMOVE ME =============================================== status tick aaa");
                             self.fps_control(direct);
                             let elapsed = fps_instant.elapsed().as_millis();
                             if elapsed < 1000 {
+                                log::info!("REMOVE ME =============================================== status tick aaa 111");
                                 continue;
                             }
                             fps_instant = Instant::now();
@@ -263,6 +281,7 @@ impl<T: InvokeUiSession> Remote<T> {
                                 chroma,
                                 ..Default::default()
                             });
+                            log::info!("REMOVE ME =============================================== status tick aaa 222 ");
                         }
                     }
                 }
@@ -537,7 +556,7 @@ impl<T: InvokeUiSession> Remote<T> {
                             }
                             let total_size = job.total_size();
                             self.read_jobs.push(job);
-                            self.timer = crate::rustdesk_interval(time::interval(MILLI1));
+                            // self.timer = crate::rustdesk_interval(time::interval(MILLI1));
                             allow_err!(
                                 peer.send(&fs::new_receive(id, to, file_num, files, total_size))
                                     .await
@@ -597,7 +616,7 @@ impl<T: InvokeUiSession> Remote<T> {
                             );
                             job.is_last_job = true;
                             self.read_jobs.push(job);
-                            self.timer = crate::rustdesk_interval(time::interval(MILLI1));
+                            // self.timer = crate::rustdesk_interval(time::interval(MILLI1));
                         }
                     }
                 }

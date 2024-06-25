@@ -1711,7 +1711,7 @@ pub async fn io_loop<T: InvokeUiSession>(handler: Session<T>, round: u32) {
                 }
             },
         );
-
+        log::info!("REMOVE ME =============================================== io loop create remote 11");
     let mut remote = Remote::new(
         handler,
         video_queue_map,
@@ -1723,6 +1723,7 @@ pub async fn io_loop<T: InvokeUiSession>(handler: Session<T>, round: u32) {
         decode_fps_map,
         chroma,
     );
+    log::info!("REMOVE ME =============================================== io loop create remote 22");
     remote.io_loop(&key, &token, round).await;
     remote.sync_jobs_status_to_local().await;
 }
