@@ -392,12 +392,17 @@ fn run(vs: VideoService) -> ResultType<()> {
     #[cfg(target_os = "linux")]
     super::wayland::ensure_inited()?;
     #[cfg(target_os = "linux")]
-    let _wayland_call_on_ret = SimpleCallOnReturn {
-        b: true,
-        f: Box::new(|| {
-            super::wayland::clear();
-        }),
-    };
+    let _wayland_call_on_ret =
+        if !config::LocalConfig::get_option(config::keys::RESTORE_TOKEN_CONF_KEY).is_empty() {
+            Some(SimpleCallOnReturn {
+                b: true,
+                f: Box::new(|| {
+                    super::wayland::clear();
+                }),
+            })
+        } else {
+            None
+        };
 
     #[cfg(windows)]
     let last_portable_service_running = crate::portable_service::client::running();

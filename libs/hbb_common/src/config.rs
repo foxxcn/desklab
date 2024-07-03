@@ -2132,6 +2132,8 @@ pub mod keys {
     pub const OPTION_PROXY_USERNAME: &str = "proxy-username";
     pub const OPTION_PROXY_PASSWORD: &str = "proxy-password";
 
+    pub const RESTORE_TOKEN_CONF_KEY: &str = "wayland-restore-token";
+
     // DEFAULT_DISPLAY_SETTINGS, OVERWRITE_DISPLAY_SETTINGS
     pub const KEYS_DISPLAY_SETTINGS: &[&str] = &[
         OPTION_VIEW_ONLY,
