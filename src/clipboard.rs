@@ -14,7 +14,6 @@ use hbb_common::{
 
 pub const CLIPBOARD_NAME: &'static str = "clipboard";
 pub const CLIPBOARD_INTERVAL: u64 = 333;
-const FAKE_SVG_WIDTH: usize = 999999;
 
 lazy_static::lazy_static! {
     pub static ref CONTENT: Arc<Mutex<ClipboardData>> = Default::default();
@@ -194,6 +193,7 @@ pub fn update_clipboard(clipboard: Clipboard, old: Option<Arc<Mutex<ClipboardDat
 #[derive(Clone)]
 pub enum ClipboardData {
     Text(String),
+    Html(String),
     Image(arboard::ImageData<'static>, u64),
     Empty,
 }
@@ -220,73 +220,89 @@ impl ClipboardData {
         match self {
             ClipboardData::Empty => true,
             ClipboardData::Text(s) => s.is_empty(),
+            ClipboardData::Html(s) => s.is_empty(),
             ClipboardData::Image(a, _) => a.bytes().is_empty(),
         }
     }
 
     fn from_msg(clipboard: Clipboard) -> Self {
-        let is_image = clipboard.width > 0;
         let data = if clipboard.compress {
             decompress(&clipboard.content)
         } else {
             clipboard.content.into()
         };
-        if is_image {
-            // We cannot use data.start_with(b"<svg") to check if it is svg image
-            // because svg image may starts with other bytes
-            let img = if clipboard.height == 0 && clipboard.width as usize == FAKE_SVG_WIDTH {
-                arboard::ImageData::svg(std::str::from_utf8(&data).unwrap_or_default())
-            } else {
-                arboard::ImageData::rgba(clipboard.width as _, clipboard.height as _, data.into())
-            };
-            ClipboardData::Image(img, 0)
-        } else {
-            if let Ok(content) = String::from_utf8(data) {
-                ClipboardData::Text(content)
-            } else {
-                ClipboardData::Empty
+        match clipboard.format.enum_value() {
+            Ok(ClipboardFormat::Text) => {
+                if let Ok(content) = String::from_utf8(data) {
+                    return ClipboardData::Text(content);
+                } else {
+                    ClipboardData::Empty
+                }
             }
+            Ok(ClipboardFormat::Html) => {
+                if let Ok(content) = String::from_utf8(data) {
+                    return ClipboardData::Html(content);
+                } else {
+                    ClipboardData::Empty
+                }
+            }
+            Ok(ClipboardFormat::ImageRgba) => ClipboardData::Image(
+                arboard::ImageData::rgba(clipboard.width as _, clipboard.height as _, data.into()),
+                0,
+            ),
+            Ok(ClipboardFormat::ImageSvg) => ClipboardData::Image(
+                arboard::ImageData::svg(std::str::from_utf8(&data).unwrap_or_default()),
+                0,
+            ),
+            _ => ClipboardData::Empty,
         }
+    }
+
+    fn fill_plain_msg(msg: &mut Message, s: &str, format: ClipboardFormat) {
+        let compressed = compress_func(s.as_bytes());
+        let compress = compressed.len() < s.as_bytes().len();
+        let content = if compress {
+            compressed
+        } else {
+            s.bytes().collect::<Vec<u8>>()
+        };
+        msg.set_clipboard(Clipboard {
+            compress,
+            content: content.into(),
+            format: format.into(),
+            ..Default::default()
+        });
+    }
+
+    fn fill_image_msg(msg: &mut Message, a: &arboard::ImageData) {
+        let compressed = compress_func(&a.bytes());
+        let compress = compressed.len() < a.bytes().len();
+        let content = if compress {
+            compressed
+        } else {
+            a.bytes().to_vec()
+        };
+        let (w, h, format) = match a {
+            arboard::ImageData::Rgba(a) => (a.width, a.height, ClipboardFormat::ImageRgba),
+            arboard::ImageData::Svg(_) => (0, 0, ClipboardFormat::ImageSvg),
+        };
+        msg.set_clipboard(Clipboard {
+            compress,
+            content: content.into(),
+            width: w as _,
+            height: h as _,
+            format: format.into(),
+            ..Default::default()
+        });
     }
 
     pub fn create_msg(&self) -> Message {
         let mut msg = Message::new();
 
         match self {
-            ClipboardData::Text(s) => {
-                let compressed = compress_func(s.as_bytes());
-                let compress = compressed.len() < s.as_bytes().len();
-                let content = if compress {
-                    compressed
-                } else {
-                    s.clone().into_bytes()
-                };
-                msg.set_clipboard(Clipboard {
-                    compress,
-                    content: content.into(),
-                    ..Default::default()
-                });
-            }
-            ClipboardData::Image(a, _) => {
-                let compressed = compress_func(&a.bytes());
-                let compress = compressed.len() < a.bytes().len();
-                let content = if compress {
-                    compressed
-                } else {
-                    a.bytes().to_vec()
-                };
-                let (w, h) = match a {
-                    arboard::ImageData::Rgba(a) => (a.width, a.height),
-                    arboard::ImageData::Svg(_) => (FAKE_SVG_WIDTH as _, 0 as _),
-                };
-                msg.set_clipboard(Clipboard {
-                    compress,
-                    content: content.into(),
-                    width: w as _,
-                    height: h as _,
-                    ..Default::default()
-                });
-            }
+            ClipboardData::Text(s) => Self::fill_plain_msg(&mut msg, s, ClipboardFormat::Text),
+            ClipboardData::Html(s) => Self::fill_plain_msg(&mut msg, s, ClipboardFormat::Html),
+            ClipboardData::Image(a, _) => Self::fill_image_msg(&mut msg, a),
             _ => {}
         }
         msg
@@ -420,6 +436,10 @@ impl ClipboardContext {
                 self.is_last_plain = matches!(image, arboard::ImageData::Svg(_));
                 return Ok(ClipboardData::image(image));
             }
+            if let Ok(html) = self.inner.get_html() {
+                self.is_last_plain = true;
+                return Ok(ClipboardData::Html(html));
+            }
         }
         Ok(ClipboardData::Text(self.inner.get_text()?))
     }
@@ -428,6 +448,7 @@ impl ClipboardContext {
         let _lock = ARBOARD_MTX.lock().unwrap();
         match data {
             ClipboardData::Text(s) => self.inner.set_text(s)?,
+            ClipboardData::Html(s) => self.inner.set_html(s, None)?,
             ClipboardData::Image(a, _) => self.inner.set_image(a.clone())?,
             _ => {}
         }

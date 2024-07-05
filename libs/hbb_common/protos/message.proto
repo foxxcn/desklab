@@ -315,11 +315,19 @@ message Hash {
   string challenge = 2;
 }
 
+enum ClipboardFormat {
+  Text = 0;
+  Html = 1;
+  ImageRgba = 21;
+  ImageSvg = 22;
+}
+
 message Clipboard {
   bool compress = 1;
   bytes content = 2;
   int32 width = 3;
   int32 height = 4;
+  ClipboardFormat format = 5;
 }
 
 enum FileType {
