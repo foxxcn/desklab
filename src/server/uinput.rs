@@ -518,6 +518,8 @@ pub mod service {
                     enigo::MouseButton::Left => mouce::common::MouseButton::Left,
                     enigo::MouseButton::Middle => mouce::common::MouseButton::Middle,
                     enigo::MouseButton::Right => mouce::common::MouseButton::Right,
+                    enigo::MouseButton::Back => mouce::common::MouseButton::Back,
+                    enigo::MouseButton::Forward => mouce::common::MouseButton::Forward,
                     _ => {
                         return;
                     }
@@ -529,6 +531,8 @@ pub mod service {
                     enigo::MouseButton::Left => mouce::common::MouseButton::Left,
                     enigo::MouseButton::Middle => mouce::common::MouseButton::Middle,
                     enigo::MouseButton::Right => mouce::common::MouseButton::Right,
+                    enigo::MouseButton::Back => mouce::common::MouseButton::Back,
+                    enigo::MouseButton::Forward => mouce::common::MouseButton::Forward,
                     _ => {
                         return;
                     }
@@ -540,6 +544,8 @@ pub mod service {
                     enigo::MouseButton::Left => mouce::common::MouseButton::Left,
                     enigo::MouseButton::Middle => mouce::common::MouseButton::Middle,
                     enigo::MouseButton::Right => mouce::common::MouseButton::Right,
+                    enigo::MouseButton::Back => mouce::common::MouseButton::Back,
+                    enigo::MouseButton::Forward => mouce::common::MouseButton::Forward,
                     _ => {
                         return;
                     }
