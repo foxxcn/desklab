@@ -224,7 +224,7 @@ checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
 [[package]]
 name = "arboard"
 version = "3.4.0"
-source = "git+https://github.com/fufesou/arboard?branch=refact/derive_serialize_for_data#16022004e545750d440033644c774ea8d052d854"
+source = "git+https://github.com/rustdesk-org/arboard#520c69272dfa90a096332820eadae17036b85d14"
 dependencies = [
  "clipboard-win",
  "core-graphics 0.23.2",
@@ -1677,7 +1677,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.7.4",
+ "libloading 0.8.4",
 ]
 
 [[package]]

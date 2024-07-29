@@ -212,7 +212,7 @@ pub enum Data {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     ClipboardFile(ClipboardFile),
     ClipboardFileEnabled(bool),
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_os = "windows")]
     ClipboardNonFile(Vec<ClipboardData>),
     ClipboardNonFileEnabled(bool),
     PrivacyModeState((i32, PrivacyModeState, String)),

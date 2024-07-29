@@ -74,6 +74,7 @@ struct IpcTaskRunner<T: InvokeUiCM> {
     file_transfer_enabled: bool,
     #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     file_transfer_enabled_peer: bool,
+    #[cfg(target_os = "windows")]
     clipboard_non_file_enabled_peer: bool,
 }
 
@@ -380,7 +381,10 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
         }
         let (tx_log, mut rx_log) = mpsc::unbounded_channel::<String>();
 
+        #[cfg(target_os = "windows")]
         let mut rx_clipboard_non_file = clipboard_non_file::get_new_receiver();
+        #[cfg(not(target_os = "windows"))]
+        let (_tx_clipboard_non_file, mut rx_clipboard_non_file) = unbounded_channel::<()>();
 
         self.running = false;
         loop {
@@ -471,7 +475,7 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                                     }
                                 }
                                 Data::ClipboardNonFileEnabled(_enabled) => {
-                                    #[cfg(any(target_os= "windows",target_os ="linux", target_os = "macos"))]
+                                    #[cfg(target_os = "windows")]
                                     {
                                         self.clipboard_non_file_enabled_peer = _enabled;
                                     }
@@ -513,10 +517,6 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                             #[cfg(any(target_os="linux", target_os="windows", target_os = "macos"))]
                             if _name == "file" {
                                 self.file_transfer_enabled = *_enabled;
-                            } else if _name == "clipboard" || _name == "keyboard" {
-                                if !_enabled {
-                                    self.clipboard_non_file_enabled_peer = false;
-                                }
                             }
                         }
                         Data::Authorize => {
@@ -550,9 +550,10 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                         //
                     }
                 },
-                Some(clip_non_file) = rx_clipboard_non_file.recv() => {
+                Some(_clip_non_file) = rx_clipboard_non_file.recv() => {
+                    #[cfg(target_os = "windows")]
                     if self.clipboard_non_file_enabled_peer {
-                        allow_err!(self.tx.send(Data::ClipboardNonFile(clip_non_file)));
+                        allow_err!(self.tx.send(Data::ClipboardNonFile(_clip_non_file)));
                     }
                 }
                 Some(job_log) = rx_log.recv() => {
@@ -577,6 +578,7 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
             file_transfer_enabled: false,
             #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
             file_transfer_enabled_peer: false,
+            #[cfg(target_os = "windows")]
             clipboard_non_file_enabled_peer: true,
         };
 
@@ -607,6 +609,7 @@ pub async fn start_ipc<T: InvokeUiCM>(cm: ConnectionManager<T>) {
         &Config::get_option(OPTION_ENABLE_FILE_TRANSFER),
     ));
 
+    #[cfg(target_os = "windows")]
     std::thread::spawn(|| {
         clipboard_non_file::start();
     });
@@ -633,11 +636,12 @@ pub async fn start_ipc<T: InvokeUiCM>(cm: ConnectionManager<T>) {
         }
     }
 
+    #[cfg(target_os = "windows")]
     clipboard_non_file::stop();
     crate::platform::quit_gui();
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[cfg(target_os = "windows")]
 mod clipboard_non_file {
     use crate::clipboard::{ClipboardContext, ClipboardSide, CLIPBOARD_INTERVAL as INTERVAL};
     use arboard::ClipboardData;
@@ -669,7 +673,6 @@ mod clipboard_non_file {
         tx_cb_result: Sender<CallbackResult>,
     }
 
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     impl ClipboardHandler for Handler {
         fn on_clipboard_change(&mut self) -> CallbackResult {
             let content = self.ctx.get(ClipboardSide::Host, false);
