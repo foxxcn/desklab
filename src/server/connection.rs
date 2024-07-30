@@ -2704,6 +2704,7 @@ impl Connection {
                     {
                         return;
                     }
+                    #[allow(unused_mut)]
                     let mut record_changed = true;
                     #[cfg(windows)]
                     if virtual_display_manager::amyuni_idd::is_my_display(&name) {

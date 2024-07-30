@@ -15,8 +15,7 @@ use hbb_common::{
 use std::{
     cell::RefCell,
     ffi::OsStr,
-    fs::File,
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, Write},
     path::{Path, PathBuf},
     process::{Child, Command},
     string::String,
@@ -730,7 +729,8 @@ pub fn block_input(_v: bool) -> (bool, String) {
 
 pub fn is_installed() -> bool {
     if let Ok(p) = std::env::current_exe() {
-        p.to_str().unwrap_or_default().starts_with("/usr") || p.to_str().unwrap_or_default().starts_with("/nix/store")
+        p.to_str().unwrap_or_default().starts_with("/usr")
+            || p.to_str().unwrap_or_default().starts_with("/nix/store")
     } else {
         false
     }
