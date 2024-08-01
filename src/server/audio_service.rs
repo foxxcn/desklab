@@ -16,7 +16,10 @@ use super::*;
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
 use hbb_common::anyhow::anyhow;
 use magnum_opus::{Application::*, Channels::*, Encoder};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc,
+};
 
 pub const NAME: &'static str = "audio";
 pub const AUDIO_DATA_SIZE_U8: usize = 960 * 4; // 10ms in 48000 stereo
@@ -26,10 +29,19 @@ lazy_static::lazy_static! {
     static ref VOICE_CALL_INPUT_DEVICE: Arc::<Mutex::<Option<String>>> = Default::default();
 }
 
+#[cfg(not(feature = "audio_asio"))]
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
 pub fn new() -> GenericService {
     let svc = EmptyExtraFieldService::new(NAME.to_owned(), true);
     GenericService::repeat::<cpal_impl::State, _, _>(&svc.clone(), 33, cpal_impl::run);
+    svc.sp
+}
+
+#[cfg(feature = "audio_asio")]
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+pub fn new() -> GenericService {
+    let svc = EmptyExtraFieldService::new(NAME.to_owned(), true);
+    GenericService::run(&svc.clone(), cpal_impl::run);
     svc.sp
 }
 
@@ -139,6 +151,7 @@ mod pa_impl {
 
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
 mod cpal_impl {
+    #[cfg(not(feature = "audio_asio"))]
     use self::service::{Reset, ServiceSwap};
     use super::*;
     use cpal::{
@@ -162,6 +175,7 @@ mod cpal_impl {
         }
     }
 
+    #[cfg(not(feature = "audio_asio"))]
     fn run_restart(sp: EmptyExtraFieldService, state: &mut State) -> ResultType<()> {
         state.reset();
         sp.snapshot(|_sps: ServiceSwap<_>| Ok(()))?;
@@ -178,6 +192,7 @@ mod cpal_impl {
         Ok(())
     }
 
+    #[cfg(not(feature = "audio_asio"))]
     fn run_serv_snapshot(sp: EmptyExtraFieldService, state: &mut State) -> ResultType<()> {
         sp.snapshot(|sps| {
             match &state.stream {
@@ -194,12 +209,47 @@ mod cpal_impl {
         Ok(())
     }
 
+    #[cfg(not(feature = "audio_asio"))]
     pub fn run(sp: EmptyExtraFieldService, state: &mut State) -> ResultType<()> {
         if !RESTARTING.load(Ordering::SeqCst) {
             run_serv_snapshot(sp, state)
         } else {
             run_restart(sp, state)
         }
+    }
+
+    #[cfg(feature = "audio_asio")]
+    pub fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
+        let (tx, rx) = mpsc::channel();
+        crate::audio::cpal_impl::start(tx.clone());
+        let mut format_msg: Option<Arc<Message>> = None;
+        while sp.ok() {
+            sp.snapshot(|sps| {
+                if let Some(msg) = &format_msg {
+                    sps.send_shared(msg.clone());
+                };
+                Ok(())
+            })?;
+            match rx.recv_timeout(Duration::from_millis(300)) {
+                Ok(msg) => match msg {
+                    crate::audio::cpal_impl::AudioData::Format(msg) => {
+                        format_msg = Some(msg.clone());
+                        sp.send_shared(msg);
+                    }
+                    crate::audio::cpal_impl::AudioData::Data(msg) => {
+                        sp.send_shared(msg);
+                    }
+                },
+                Err(_) => {}
+            }
+            if RESTARTING.load(Ordering::SeqCst) {
+                crate::audio::cpal_impl::stop();
+                crate::audio::cpal_impl::start(tx.clone());
+                format_msg = None;
+                RESTARTING.store(false, Ordering::SeqCst);
+            }
+        }
+        Ok(())
     }
 
     pub fn send(
@@ -281,6 +331,7 @@ mod cpal_impl {
     }
 
     #[inline]
+    #[cfg(not(feature = "audio_asio"))]
     fn play(sp: EmptyExtraFieldService) -> ResultType<(Box<dyn StreamTrait>, Arc<Message>)> {
         play_cb(&HOST, move |msg: Arc<Message>| {
             sp.send_shared(msg);

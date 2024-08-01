@@ -20,8 +20,8 @@ lazy_static! {
 pub enum CpalRequest {
     SoundInputs,
     Close,
-    Subscribe(CpalSubscriber),
-    Unsubscribe(i32),
+    Start(mpsc::Sender<AudioData>),
+    Stop,
 }
 
 pub enum CpalResponse {
@@ -33,26 +33,28 @@ pub type CpalReqReceiver = mpsc::Receiver<CpalRequest>;
 pub type CpalRespSender = mpsc::Sender<CpalResponse>;
 pub type CpalRespReceiver = mpsc::Receiver<CpalResponse>;
 
-#[derive(Clone)]
-pub struct CpalSubscriber {
-    id: i32,
-    tx: mpsc::Sender<Arc<Message>>,
-}
-
-impl CpalSubscriber {
-    fn id(&self) -> i32 {
-        self.id
-    }
-
-    fn send(&mut self, msg: Arc<Message>) {
-        allow_err!(self.tx.send(msg));
-    }
+pub enum AudioData {
+    Format(Arc<Message>),
+    Data(Arc<Message>),
 }
 
 struct CpalService {
     host: Host,
-    subscribers: Arc<Mutex<Vec<CpalSubscriber>>>,
     stream_config: Option<(Box<dyn StreamTrait>, Arc<Message>)>,
+}
+
+#[cfg(feature = "audio_asio")]
+pub fn start(tx_msg: mpsc::Sender<AudioData>) {
+    if let Some((tx, _)) = &*CPAL_ASIO_TX_RX.lock().unwrap() {
+        allow_err!(tx.send(CpalRequest::Start(tx_msg)));
+    }
+}
+
+#[cfg(feature = "audio_asio")]
+pub fn stop() {
+    if let Some((tx, _)) = &*CPAL_ASIO_TX_RX.lock().unwrap() {
+        allow_err!(tx.send(CpalRequest::Stop));
+    }
 }
 
 pub fn get_sound_inputs(timeout: Duration) -> ResultType<Vec<String>> {
@@ -115,7 +117,6 @@ fn cpal_thread_loop(host: Host, req_rx: CpalReqReceiver, rsep_tx: CpalRespSender
 
     let mut service = CpalService {
         host,
-        subscribers: Arc::new(Mutex::new(Vec::new())),
         stream_config: None,
     };
     let recv_timeout = Duration::from_millis(300);
@@ -130,11 +131,11 @@ fn cpal_thread_loop(host: Host, req_rx: CpalReqReceiver, rsep_tx: CpalRespSender
                 log::info!("Cpal thread loop close.");
                 break;
             }
-            Ok(CpalRequest::Subscribe(s)) => {
-                service.on_subscribe(s);
+            Ok(CpalRequest::Start(s)) => {
+                service.start(s);
             }
-            Ok(CpalRequest::Unsubscribe(id)) => {
-                service.on_unsubscribe(id);
+            Ok(CpalRequest::Stop) => {
+                service.stop();
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
@@ -147,39 +148,23 @@ fn cpal_thread_loop(host: Host, req_rx: CpalReqReceiver, rsep_tx: CpalRespSender
 }
 
 impl CpalService {
-    fn on_subscribe(&mut self, sub: CpalSubscriber) {
-        for s in self.subscribers.lock().unwrap().iter() {
-            if s.id() == sub.id() {
-                return;
-            }
-        }
-        self.subscribers.lock().unwrap().push(sub.clone());
-        self.start_sub(sub);
-    }
-    fn on_unsubscribe(&mut self, id: i32) {
-        self.subscribers.lock().unwrap().retain(|s| s.id() != id);
-    }
-
-    fn ok(&self) -> bool {
-        !self.subscribers.lock().unwrap().is_empty()
-    }
-
-    fn start_sub(&mut self, mut sub: CpalSubscriber) {
+    fn start(&mut self, tx: mpsc::Sender<AudioData>) {
         match &self.stream_config {
             Some((_, msg)) => {
-                sub.send(msg.clone());
+                // unreachable!();
+                // We only consider one subscriber for now.
+                // This can easily be changed to multiple subscribers if needed.
+                allow_err!(tx.send(AudioData::Format(msg.clone())));
             }
             None => {
-                let subscribers = self.subscribers.clone();
+                let tx_cloned = tx.clone();
                 let cb = move |msg: Arc<Message>| {
-                    for s in subscribers.lock().unwrap().iter_mut() {
-                        s.send(msg.clone());
-                    }
+                    allow_err!(tx_cloned.send(AudioData::Data(msg.clone())));
                 };
                 match cpal_play_cb(&self.host, cb) {
                     Ok((stream, msg)) => {
                         self.stream_config = Some((stream, msg.clone()));
-                        sub.send(msg);
+                        allow_err!(tx.send(AudioData::Format(msg)));
                     }
                     Err(e) => {
                         log::error!("Failed to play audio: {}", e);
@@ -187,5 +172,9 @@ impl CpalService {
                 }
             }
         }
+    }
+
+    fn stop(&mut self) {
+        let _ = self.stream_config.take();
     }
 }
