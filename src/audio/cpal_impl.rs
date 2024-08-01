@@ -132,9 +132,11 @@ fn cpal_thread_loop(host: Host, req_rx: CpalReqReceiver, rsep_tx: CpalRespSender
                 break;
             }
             Ok(CpalRequest::Start(s)) => {
+                log::debug!("Cpal start.");
                 service.start(s);
             }
             Ok(CpalRequest::Stop) => {
+                log::debug!("Cpal stop.");
                 service.stop();
             }
             Err(RecvTimeoutError::Timeout) => {}

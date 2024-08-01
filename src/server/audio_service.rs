@@ -222,6 +222,12 @@ mod cpal_impl {
     pub fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
         let (tx, rx) = mpsc::channel();
         crate::audio::cpal_impl::start(tx.clone());
+        let _cpal_stop_call_on_ret = crate::SimpleCallOnReturn {
+            b: true,
+            f: Box::new(|| {
+                crate::audio::cpal_impl::stop();
+            }),
+        };
         let mut format_msg: Option<Arc<Message>> = None;
         while sp.ok() {
             sp.snapshot(|sps| {
@@ -394,6 +400,7 @@ mod cpal_impl {
         };
         let sample_rate_0 = config.sample_rate().0;
         log::debug!("Audio sample rate : {}", sample_rate);
+        #[cfg(not(feature = "audio_asio"))]
         unsafe {
             AUDIO_ZERO_COUNT = 0;
         }
@@ -457,7 +464,9 @@ fn create_format_msg(sample_rate: u32, channels: u16) -> Message {
 // use AUDIO_ZERO_COUNT for the Noise(Zero) Gate Attack Time
 // every audio data length is set to 480
 // MAX_AUDIO_ZERO_COUNT=800 is similar as Gate Attack Time 3~5s(Linux) || 6~8s(Windows)
+#[cfg(not(feature = "audio_asio"))]
 const MAX_AUDIO_ZERO_COUNT: u16 = 800;
+#[cfg(not(feature = "audio_asio"))]
 static mut AUDIO_ZERO_COUNT: u16 = 0;
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -468,6 +477,7 @@ fn send_f32(data: &[f32], encoder: &mut Encoder, sp: &GenericService) {
 }
 
 pub fn send_f32_cb(data: &[f32], encoder: &mut Encoder, cb: impl Fn(Arc<Message>)) {
+    #[cfg(not(feature = "audio_asio"))]
     if data.iter().filter(|x| **x != 0.).next().is_some() {
         unsafe {
             AUDIO_ZERO_COUNT = 0;
@@ -513,7 +523,6 @@ pub fn send_f32_cb(data: &[f32], encoder: &mut Encoder, cb: impl Fn(Arc<Message>
             return;
         }
     }
-
     #[cfg(not(target_os = "android"))]
     match encoder.encode_vec_float(data, data.len() * 6) {
         Ok(data) => {
@@ -525,7 +534,7 @@ pub fn send_f32_cb(data: &[f32], encoder: &mut Encoder, cb: impl Fn(Arc<Message>
             cb(Arc::new(msg_out));
         }
         Err(e) => {
-            log::debug!("Failed to encode audio: {}", e);
+            log::error!("Failed to encode audio: {}", e);
         }
     }
 }
