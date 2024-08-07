@@ -399,6 +399,8 @@ pub fn try_get_displays_add_amyuni_headless() -> ResultType<Vec<Display>> {
 #[inline]
 #[cfg(windows)]
 pub fn try_get_displays_(add_amyuni_headless: bool) -> ResultType<Vec<Display>> {
+    use crate::platform::windows::reg_display_settings;
+
     let mut displays = Display::all()?;
 
     // Do not add virtual display if the platform is not installed or the virtual display is not supported.
@@ -433,14 +435,31 @@ pub fn try_get_displays_(add_amyuni_headless: bool) -> ResultType<Vec<Display>> 
     // }
 
     let no_displays_v = no_displays(&displays);
-    virtual_display_manager::set_can_plug_out_all(!no_displays_v);
     if no_displays_v {
         log::debug!("no displays, create virtual display");
+        let reg_connectivity_old = reg_display_settings::read_reg_connectivity();
         if let Err(e) = virtual_display_manager::plug_in_headless() {
             log::error!("plug in headless failed {}", e);
         } else {
             displays = Display::all()?;
         }
+        let reg_connectivity_new = reg_display_settings::read_reg_connectivity();
+        if let (Ok(old), Ok(new)) = (reg_connectivity_old, reg_connectivity_new) {
+            if old.len() != new.len() {
+                change_resolution_if_first_plug_in(&displays);
+            }
+        }
     }
     Ok(displays)
+}
+
+#[inline]
+#[cfg(windows)]
+fn change_resolution_if_first_plug_in(displays: &Vec<Display>) {
+    for d in displays.iter() {
+        let name = d.name();
+        if virtual_display_manager::amyuni_idd::is_my_display(&name) {
+            crate::platform::change_resolution(&name, 1920, 1080).ok();
+        }
+    }
 }
