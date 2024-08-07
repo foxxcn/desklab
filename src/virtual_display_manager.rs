@@ -1,5 +1,4 @@
 use hbb_common::{bail, platform::windows::is_windows_version_or_greater, ResultType};
-use std::sync::atomic;
 
 // This string is defined here.
 //  https://github.com/rustdesk-org/RustDeskIddDriver/blob/b370aad3f50028b039aad211df60c8051c4a64d6/RustDeskIddDriver/RustDeskIddDriver.inf#LL73C1-L73C40
@@ -9,29 +8,6 @@ pub const AMYUNI_IDD_DEVICE_STRING: &'static str = "USB Mobile Monitor Virtual D
 const IDD_IMPL: &str = IDD_IMPL_AMYUNI;
 const IDD_IMPL_RUSTDESK: &str = "rustdesk_idd";
 const IDD_IMPL_AMYUNI: &str = "amyuni_idd";
-
-const IS_CAN_PLUG_OUT_ALL_NOT_SET: i8 = 0;
-const IS_CAN_PLUG_OUT_ALL_YES: i8 = 1;
-const IS_CAN_PLUG_OUT_ALL_NO: i8 = 2;
-static IS_CAN_PLUG_OUT_ALL: atomic::AtomicI8 = atomic::AtomicI8::new(IS_CAN_PLUG_OUT_ALL_NOT_SET);
-
-pub fn is_can_plug_out_all() -> bool {
-    IS_CAN_PLUG_OUT_ALL.load(atomic::Ordering::Relaxed) != IS_CAN_PLUG_OUT_ALL_NO
-}
-
-// No need to consider concurrency here.
-pub fn set_can_plug_out_all(v: bool) {
-    if IS_CAN_PLUG_OUT_ALL.load(atomic::Ordering::Relaxed) == IS_CAN_PLUG_OUT_ALL_NOT_SET {
-        IS_CAN_PLUG_OUT_ALL.store(
-            if v {
-                IS_CAN_PLUG_OUT_ALL_YES
-            } else {
-                IS_CAN_PLUG_OUT_ALL_NO
-            },
-            atomic::Ordering::Relaxed,
-        );
-    }
-}
 
 pub fn is_amyuni_idd() -> bool {
     IDD_IMPL == IDD_IMPL_AMYUNI
@@ -110,7 +86,7 @@ pub fn plug_out_monitor(index: i32) -> ResultType<()> {
             };
             rustdesk_idd::plug_out_peer_request(&indices)
         }
-        IDD_IMPL_AMYUNI => amyuni_idd::plug_out_monitor(index),
+        IDD_IMPL_AMYUNI => amyuni_idd::plug_out_monitor(index, false),
         _ => bail!("Unsupported virtual display implementation."),
     }
 }
@@ -131,7 +107,7 @@ pub fn plug_out_monitor_indices(indices: &[u32]) -> ResultType<()> {
         IDD_IMPL_RUSTDESK => rustdesk_idd::plug_out_peer_request(indices),
         IDD_IMPL_AMYUNI => {
             for _idx in indices.iter() {
-                amyuni_idd::plug_out_monitor(0)?;
+                amyuni_idd::plug_out_monitor(0, false)?;
             }
             Ok(())
         }
@@ -142,7 +118,7 @@ pub fn plug_out_monitor_indices(indices: &[u32]) -> ResultType<()> {
 pub fn reset_all() -> ResultType<()> {
     match IDD_IMPL {
         IDD_IMPL_RUSTDESK => rustdesk_idd::reset_all(),
-        IDD_IMPL_AMYUNI => crate::privacy_mode::turn_off_privacy(0, None).unwrap_or(Ok(())),
+        IDD_IMPL_AMYUNI => amyuni_idd::reset_all(),
         _ => bail!("Unsupported virtual display implementation."),
     }
 }
@@ -532,6 +508,13 @@ pub mod amyuni_idd {
         Ok(())
     }
 
+    pub fn reset_all() -> ResultType<()> {
+        let _ = crate::privacy_mode::turn_off_privacy(0, None);
+        let _ = plug_out_monitor(0, true);
+        *LAST_PLUG_IN_HEADLESS_TIME.lock().unwrap() = None;
+        Ok(())
+    }
+
     #[inline]
     fn plug_monitor_(add: bool) -> Result<(), win_device::DeviceError> {
         let cmd = if add { 0x10 } else { 0x00 };
@@ -603,7 +586,7 @@ pub mod amyuni_idd {
         plug_in_monitor_(true, is_async)
     }
 
-    pub fn plug_out_monitor(index: i32) -> ResultType<()> {
+    pub fn plug_out_monitor(index: i32, headless: bool) -> ResultType<()> {
         let all_count = windows::get_device_names(None).len();
         let amyuni_count = get_monitor_count();
         let mut to_plug_out_count = match all_count {
@@ -612,7 +595,7 @@ pub mod amyuni_idd {
                 if amyuni_count == 0 {
                     bail!("No virtual displays to plug out.")
                 } else {
-                    if super::is_can_plug_out_all() {
+                    if headless || LAST_PLUG_IN_HEADLESS_TIME.lock().unwrap().is_none() {
                         1
                     } else {
                         bail!("This only virtual display cannot be pulled out.")
@@ -621,7 +604,7 @@ pub mod amyuni_idd {
             }
             _ => {
                 if all_count == amyuni_count {
-                    if super::is_can_plug_out_all() {
+                    if headless || LAST_PLUG_IN_HEADLESS_TIME.lock().unwrap().is_none() {
                         all_count
                     } else {
                         all_count - 1
