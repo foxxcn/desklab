@@ -510,7 +510,7 @@ pub mod amyuni_idd {
 
     pub fn reset_all() -> ResultType<()> {
         let _ = crate::privacy_mode::turn_off_privacy(0, None);
-        let _ = plug_out_monitor(0, true);
+        let _ = plug_out_monitor(-1, true);
         *LAST_PLUG_IN_HEADLESS_TIME.lock().unwrap() = None;
         Ok(())
     }
