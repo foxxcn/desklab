@@ -2955,6 +2955,11 @@ impl Connection {
                             5_000,
                         );
                         if err_msg.is_empty() {
+                            // virtual display (Privacy mode 2) will only keep one virtual display for now.
+                            // We can remove the following code once we support multiple virtual displays (Privacy mode 2).
+                            if impl_key == crate::privacy_mode::PRIVACY_MODE_IMPL_WIN_VIRTUAL_DISPLAY {
+                                self.capture_displays(&vec![], &vec![], &vec![0]).await;
+                            }
                             crate::common::make_privacy_mode_msg(
                                 back_notification::PrivacyModeState::PrvOnSucceeded,
                                 impl_key,
