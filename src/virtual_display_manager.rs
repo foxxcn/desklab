@@ -378,7 +378,7 @@ pub mod rustdesk_idd {
 
 pub mod amyuni_idd {
     use super::windows;
-    use crate::platform::win_device;
+    use crate::platform::{reg_display_settings, win_device};
     use hbb_common::{bail, lazy_static, log, tokio::time::Instant, ResultType};
     use std::{
         ptr::null_mut,
@@ -530,6 +530,7 @@ pub mod amyuni_idd {
     fn plug_in_monitor_(add: bool, is_driver_async_installed: bool) -> ResultType<()> {
         let timeout = Duration::from_secs(3);
         let now = Instant::now();
+        let reg_connectivity_old = reg_display_settings::read_reg_connectivity();
         loop {
             match plug_monitor_(add) {
                 Ok(_) => {
@@ -550,7 +551,34 @@ pub mod amyuni_idd {
                 }
             }
         }
+        // Workaround for the issue that we can't set the default the resolution.
+        if let Ok(old_connectivity_old) = reg_connectivity_old {
+            std::thread::spawn(move || {
+                try_reset_resolution_on_first_plug_in(old_connectivity_old.len(), 1920, 1080);
+            });
+        }
+
         Ok(())
+    }
+
+    fn try_reset_resolution_on_first_plug_in(
+        old_connectivity_len: usize,
+        width: usize,
+        height: usize,
+    ) {
+        for _ in 0..10 {
+            std::thread::sleep(Duration::from_millis(300));
+            if let Ok(reg_connectivity_new) = reg_display_settings::read_reg_connectivity() {
+                if reg_connectivity_new.len() != old_connectivity_len {
+                    for name in
+                        windows::get_device_names(Some(super::AMYUNI_IDD_DEVICE_STRING)).iter()
+                    {
+                        crate::platform::change_resolution(&name, width, height).ok();
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     pub fn plug_in_headless() -> ResultType<()> {
@@ -586,7 +614,7 @@ pub mod amyuni_idd {
         plug_in_monitor_(true, is_async)
     }
 
-    pub fn plug_out_monitor(index: i32, headless: bool) -> ResultType<()> {
+    pub fn plug_out_monitor(index: i32, force_all: bool) -> ResultType<()> {
         let all_count = windows::get_device_names(None).len();
         let amyuni_count = get_monitor_count();
         let mut to_plug_out_count = match all_count {
@@ -595,7 +623,7 @@ pub mod amyuni_idd {
                 if amyuni_count == 0 {
                     bail!("No virtual displays to plug out.")
                 } else {
-                    if headless || LAST_PLUG_IN_HEADLESS_TIME.lock().unwrap().is_none() {
+                    if force_all {
                         1
                     } else {
                         bail!("This only virtual display cannot be pulled out.")
@@ -604,7 +632,7 @@ pub mod amyuni_idd {
             }
             _ => {
                 if all_count == amyuni_count {
-                    if headless || LAST_PLUG_IN_HEADLESS_TIME.lock().unwrap().is_none() {
+                    if force_all {
                         all_count
                     } else {
                         all_count - 1
