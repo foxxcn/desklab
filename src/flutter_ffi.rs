@@ -1568,53 +1568,7 @@ pub fn session_on_waiting_for_image_dialog_show(session_id: SessionID) {
 pub fn session_toggle_virtual_display(session_id: SessionID, index: i32, on: bool) {
     if let Some(session) = sessions::get_session_by_session_id(&session_id) {
         session.toggle_virtual_display(index, on);
-
-        // update virtual display option
-        let virtual_display_key = "virtual-display";
-        let displays = session.get_option(virtual_display_key.to_owned());
-        if !on {
-            if index == -1 {
-                if !displays.is_empty() {
-                    session.set_option(virtual_display_key.to_owned(), "".to_owned());
-                }
-            } else {
-                let mut vdisplays = displays.split(',').collect::<Vec<_>>();
-                let len = vdisplays.len();
-                if index == 0 {
-                    // 0 means we cann't toggle the virtual display by index.
-                    vdisplays.remove(vdisplays.len() - 1);
-                } else {
-                    if let Some(i) = vdisplays.iter().position(|&x| x == index.to_string()) {
-                        vdisplays.remove(i);
-                    }
-                }
-                if vdisplays.len() != len {
-                    session.set_option(
-                        virtual_display_key.to_owned(),
-                        vdisplays.join(",").to_owned(),
-                    );
-                }
-            }
-        } else {
-            let mut vdisplays = displays
-                .split(',')
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>();
-            let len = vdisplays.len();
-            if index == 0 {
-                vdisplays.push(index.to_string());
-            } else {
-                if !vdisplays.iter().any(|x| *x == index.to_string()) {
-                    vdisplays.push(index.to_string());
-                }
-            }
-            if vdisplays.len() != len {
-                session.set_option(
-                    virtual_display_key.to_owned(),
-                    vdisplays.join(",").to_owned(),
-                );
-            }
-        }
+        flutter::session_update_virtual_display(&session, index, on);
     }
 }
 
