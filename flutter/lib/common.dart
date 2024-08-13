@@ -3393,8 +3393,9 @@ bool isInHomePage() {
 }
 
 Widget _buildPresetPasswordWarning() {
-  if (bind.mainGetBuildinOption(key: kOptionRemovePresetPasswordWarning) !=
-      'N') {
+  if (isWeb ||
+      bind.mainGetBuildinOption(key: kOptionRemovePresetPasswordWarning) !=
+          'N') {
     return SizedBox.shrink();
   }
   return Container(

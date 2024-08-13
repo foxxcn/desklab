@@ -18,7 +18,7 @@ def safe_unicode(s):
 
 def main():
    print('export const LANGS = {')
-   for fn in glob.glob('../../../src/lang/*'):
+   for fn in glob.glob('../../../../src/lang/*'):
       lang = os.path.basename(fn)[:-3]
       if lang == 'template': continue
       print('  %s: {'%lang)
@@ -34,7 +34,7 @@ def main():
    print('}')
    check_if_retry = ['', False]
    KEY_MAP = ['', False]
-   for ln in open('../../../src/client.rs', encoding='utf-8'):
+   for ln in open('../../../../src/client.rs', encoding='utf-8'):
       ln = ln.strip()
       if 'check_if_retry' in ln:
          check_if_retry[1] = True
@@ -66,7 +66,7 @@ def main():
    print('export const KEY_MAP: any = {')
    print(KEY_MAP[0])
    print('}')
-   for ln in open('../../../Cargo.toml', encoding='utf-8'):
+   for ln in open('../../../../Cargo.toml', encoding='utf-8'):
       if ln.startswith('version ='):
          print('export const ' + ln)
 
