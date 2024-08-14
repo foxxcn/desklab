@@ -109,6 +109,7 @@ pub mod client {
         }
 
         for key_event in event_to_key_events(&event, keyboard_mode, lock_modes) {
+            println!("REMOVE ME ============================ send: {:?}", &key_event);
             send_key_event(&key_event);
         }
     }
