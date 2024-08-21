@@ -303,6 +303,7 @@ impl PrivacyModeImpl {
 
     pub fn ensure_virtual_display(&mut self) -> ResultType<()> {
         if self.virtual_displays.is_empty() {
+            let pre_displays_len = self.displays.len();
             let displays =
                 virtual_display_manager::plug_in_peer_request(vec![Self::default_display_modes()])?;
             if virtual_display_manager::is_amyuni_idd() {
@@ -311,10 +312,12 @@ impl PrivacyModeImpl {
             self.set_displays();
 
             // No physical displays, no need to use the privacy mode.
-            if self.displays.is_empty() {
+            if self.displays.is_empty() && pre_displays_len == 0 {
                 virtual_display_manager::plug_out_monitor_indices(&displays, false)?;
                 bail!(NO_PHYSICAL_DISPLAYS);
             }
+            // If pre_displays_len > 0 and self.displays.is_empty()
+            // Current display settings has already disabled all physical displays.
 
             self.virtual_displays_added.extend(displays);
         }
@@ -398,22 +401,27 @@ impl PrivacyMode for PrivacyModeImpl {
             bail!("No virtual displays.");
         }
 
-        let reg_connectivity_1 = reg_display_settings::read_reg_connectivity()?;
-        guard.set_primary_display()?;
-        guard.disable_physical_displays()?;
-        Self::commit_change_display(CDS_RESET)?;
-        let reg_connectivity_2 = reg_display_settings::read_reg_connectivity()?;
+        if !self.displays.is_empty() {
+            let reg_connectivity_1 = reg_display_settings::read_reg_connectivity()?;
+            guard.set_primary_display()?;
+            guard.disable_physical_displays()?;
+            Self::commit_change_display(CDS_RESET)?;
+            let reg_connectivity_2 = reg_display_settings::read_reg_connectivity()?;
 
-        if let Some(reg_recovery) =
-            reg_display_settings::diff_recent_connectivity(reg_connectivity_1, reg_connectivity_2)
-        {
-            Config::set_option(
-                CONFIG_KEY_REG_RECOVERY.to_owned(),
-                serde_json::to_string(&reg_recovery)?,
-            );
+            if let Some(reg_recovery) = reg_display_settings::diff_recent_connectivity(
+                reg_connectivity_1,
+                reg_connectivity_2,
+            ) {
+                Config::set_option(
+                    CONFIG_KEY_REG_RECOVERY.to_owned(),
+                    serde_json::to_string(&reg_recovery)?,
+                );
+            } else {
+                reset_config_reg_connectivity();
+            };
         } else {
-            reset_config_reg_connectivity();
-        };
+            // If there is no physical display, we do not need to change the display settings.
+        }
 
         // OpenInputDesktop and block the others' input ?
         guard.conn_id = conn_id;
