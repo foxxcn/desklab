@@ -860,18 +860,6 @@ impl<T: InvokeUiSession> Session<T> {
         keyboard::client::process_event(keyboard_mode, &event, Some(lock_modes));
     }
 
-    #[cfg(any(target_os = "ios"))]
-    pub fn handle_flutter_key_event(
-        &self,
-        _keyboard_mode: &str,
-        _character: &str,
-        _usb_hid: i32,
-        _lock_modes: i32,
-        _down_or_up: bool,
-    ) {
-    }
-
-    #[cfg(not(any(target_os = "ios")))]
     pub fn handle_flutter_key_event(
         &self,
         keyboard_mode: &str,

@@ -536,9 +536,8 @@ class InputModel {
       handleKeyDownEventModifiers(e);
     }
 
-    // * Currently mobile does not enable map mode
-    if ((isDesktop || isWebDesktop) && keyboardMode == kKeyMapMode) {
-      // FIXME: e.character is wrong for dead keys, eg: ^ in de
+    // FIXME: e.character is wrong for dead keys, eg: ^ in de
+    if (keyboardMode == kKeyMapMode) {
       newKeyboardMode(
           e.character ?? '',
           e.physicalKey.usbHidUsage & 0xFFFF,
