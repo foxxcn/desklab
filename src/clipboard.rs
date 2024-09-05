@@ -189,6 +189,7 @@ pub fn check_clipboard_cm() -> ResultType<MultiClipboards> {
 fn update_clipboard_(multi_clipboards: Vec<Clipboard>, side: ClipboardSide) {
     let mut to_update_data = proto::from_multi_clipbards(multi_clipboards);
     if to_update_data.is_empty() {
+        log::info!("Test ========================== update_clipboard_, to update data is empty");
         return;
     }
     let mut ctx = CLIPBOARD_CTX.lock().unwrap();
@@ -198,7 +199,7 @@ fn update_clipboard_(multi_clipboards: Vec<Clipboard>, side: ClipboardSide) {
                 *ctx = Some(x);
             }
             Err(e) => {
-                log::error!("Failed to create clipboard context: {}", e);
+                log::error!("Test ========================== Failed to create clipboard context: {}", e);
                 return;
             }
         }
@@ -209,10 +210,12 @@ fn update_clipboard_(multi_clipboards: Vec<Clipboard>, side: ClipboardSide) {
             side.get_owner_data(),
         )));
         if let Err(e) = ctx.set(&to_update_data) {
-            log::debug!("Failed to set clipboard: {}", e);
+            log::debug!("Test ========================== Failed to set clipboard: {}", e);
         } else {
-            log::debug!("{} updated on {}", CLIPBOARD_NAME, side);
+            log::debug!("Test ========================== {} updated on {}", CLIPBOARD_NAME, side);
         }
+    } else {
+        log::info!("Test ========================== clipboard context is none");
     }
 }
 
@@ -288,8 +291,11 @@ impl ClipboardContext {
     }
 
     fn set(&mut self, data: &[ClipboardData]) -> ResultType<()> {
+        log::info!("Test ========================== set clipboard data try lock");
         let _lock = ARBOARD_MTX.lock().unwrap();
+        log::info!("Test ========================== set clipboard data got lock");
         self.inner.set_formats(data)?;
+        log::info!("Test ========================== set clipboard data set formats done");
         Ok(())
     }
 }

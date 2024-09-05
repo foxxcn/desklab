@@ -656,6 +656,7 @@ impl Connection {
                             _ => {}
                         }
                     }
+                    let mut is_clipboard_msg = false;
                     match &msg.union {
                         Some(message::Union::Misc(m)) => {
                             match &m.union {
@@ -685,9 +686,11 @@ impl Connection {
                             }
                         }
                         Some(message::Union::MultiClipboards(_multi_clipboards)) => {
+                            is_clipboard_msg = true;
                             log::info!("Test ========================== last step to sync clipboard");
                             #[cfg(not(any(target_os = "android", target_os = "ios")))]
                             if let Some(msg_out) = crate::clipboard::get_msg_if_not_support_multi_clip(&conn.lr.version, &conn.lr.my_platform, _multi_clipboards) {
+                                log::info!("Test ========================== try send old clipboard msg");
                                 if let Err(err) = conn.stream.send(&msg_out).await {
                                     conn.on_close(&err.to_string(), false).await;
                                     break;
@@ -696,6 +699,10 @@ impl Connection {
                             }
                         }
                         _ => {}
+                    }
+
+                    if is_clipboard_msg {
+                        log::info!("Test ========================== try send new clipboard msg");
                     }
 
                     let msg: &Message = &msg;
