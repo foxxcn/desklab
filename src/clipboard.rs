@@ -173,7 +173,7 @@ pub fn check_clipboard_cm() -> ResultType<MultiClipboards> {
                 *ctx = Some(x);
             }
             Err(e) => {
-                hbb_common::bail!("Failed to create clipboard context: {}", e);
+                hbb_common::bail!("Test ========================== Failed to create clipboard context: {}", e);
             }
         }
     }
@@ -182,7 +182,7 @@ pub fn check_clipboard_cm() -> ResultType<MultiClipboards> {
         let clipboards = proto::create_multi_clipboards(content);
         Ok(clipboards)
     } else {
-        hbb_common::bail!("Failed to create clipboard context");
+        hbb_common::bail!("Test ========================== Failed to create clipboard context");
     }
 }
 
@@ -199,7 +199,10 @@ fn update_clipboard_(multi_clipboards: Vec<Clipboard>, side: ClipboardSide) {
                 *ctx = Some(x);
             }
             Err(e) => {
-                log::error!("Test ========================== Failed to create clipboard context: {}", e);
+                log::error!(
+                    "Test ========================== Failed to create clipboard context: {}",
+                    e
+                );
                 return;
             }
         }
@@ -210,9 +213,16 @@ fn update_clipboard_(multi_clipboards: Vec<Clipboard>, side: ClipboardSide) {
             side.get_owner_data(),
         )));
         if let Err(e) = ctx.set(&to_update_data) {
-            log::debug!("Test ========================== Failed to set clipboard: {}", e);
+            log::debug!(
+                "Test ========================== Failed to set clipboard: {}",
+                e
+            );
         } else {
-            log::debug!("Test ========================== {} updated on {}", CLIPBOARD_NAME, side);
+            log::debug!(
+                "Test ========================== {} updated on {}",
+                CLIPBOARD_NAME,
+                side
+            );
         }
     } else {
         log::info!("Test ========================== clipboard context is none");
@@ -383,7 +393,10 @@ pub fn start_clipbard_master_thread(
                 .ok();
             log::debug!("Test ========================== Clipboard listener started");
             if let Err(err) = master.run() {
-                log::error!("Test ========================== Failed to run clipboard listener: {}", err);
+                log::error!(
+                    "Test ========================== Failed to run clipboard listener: {}",
+                    err
+                );
             } else {
                 log::debug!("Test ========================== Clipboard listener stopped");
             }
@@ -392,7 +405,10 @@ pub fn start_clipbard_master_thread(
             tx_start_res
                 .send((
                     None,
-                    format!("Test ========================== Failed to create clipboard listener: {}", err),
+                    format!(
+                        "Test ========================== Failed to create clipboard listener: {}",
+                        err
+                    ),
                 ))
                 .ok();
         }
@@ -405,6 +421,7 @@ mod proto {
     use arboard::ClipboardData;
     use hbb_common::{
         compress::{compress as compress_func, decompress},
+        log,
         message_proto::{Clipboard, ClipboardFormat, Message, MultiClipboards},
     };
 
@@ -513,21 +530,89 @@ mod proto {
             clipboard.content.into()
         };
         match clipboard.format.enum_value() {
-            Ok(ClipboardFormat::Text) => String::from_utf8(data).ok().map(ClipboardData::Text),
-            Ok(ClipboardFormat::Rtf) => String::from_utf8(data).ok().map(ClipboardData::Rtf),
-            Ok(ClipboardFormat::Html) => String::from_utf8(data).ok().map(ClipboardData::Html),
-            Ok(ClipboardFormat::ImageRgba) => Some(ClipboardData::Image(arboard::ImageData::rgba(
-                clipboard.width as _,
-                clipboard.height as _,
-                data.into(),
-            ))),
+            Ok(ClipboardFormat::Text) => {
+                log::info!("Test ========================== try retrieve clipboard text");
+                match String::from_utf8(data) {
+                    Ok(s) => {
+                        if s.is_empty() {
+                            log::error!("Test ========================== text string is empty");
+                            return None;
+                        } else {
+                            Some(ClipboardData::Text(s))
+                        }
+                    }
+                    Err(e) => {
+                        log::error!(
+                            "Test ========================== Failed to convert clipboard text: {}",
+                            e
+                        );
+                        None
+                    }
+                }
+            }
+            Ok(ClipboardFormat::Rtf) => {
+                log::info!("Test ========================== try retrieve clipboard rtf");
+                match String::from_utf8(data) {
+                    Ok(s) => {
+                        if s.is_empty() {
+                            log::error!("Test ========================== rtf string is empty");
+                            return None;
+                        } else {
+                            Some(ClipboardData::Rtf(s))
+                        }
+                    }
+                    Err(e) => {
+                        log::error!(
+                            "Test ========================== Failed to convert clipboard rtf: {}",
+                            e
+                        );
+                        None
+                    }
+                }
+            }
+            Ok(ClipboardFormat::Html) => {
+                log::info!("Test ========================== try retrieve clipboard html");
+                match String::from_utf8(data) {
+                    Ok(s) => {
+                        if s.is_empty() {
+                            log::error!("Test ========================== html string is empty");
+                            return None;
+                        } else {
+                            Some(ClipboardData::Html(s))
+                        }
+                    }
+                    Err(e) => {
+                        log::error!(
+                            "Test ========================== Failed to convert clipboard html: {}",
+                            e
+                        );
+                        None
+                    }
+                }
+            }
+            Ok(ClipboardFormat::ImageRgba) => {
+                log::info!("Test ========================== try retrieve clipboard image rgba");
+                Some(ClipboardData::Image(arboard::ImageData::rgba(
+                    clipboard.width as _,
+                    clipboard.height as _,
+                    data.into(),
+                )))
+            }
             Ok(ClipboardFormat::ImagePng) => {
+                log::info!("Test ========================== try retrieve clipboard image png");
                 Some(ClipboardData::Image(arboard::ImageData::png(data.into())))
             }
-            Ok(ClipboardFormat::ImageSvg) => Some(ClipboardData::Image(arboard::ImageData::svg(
-                std::str::from_utf8(&data).unwrap_or_default(),
-            ))),
+            Ok(ClipboardFormat::ImageSvg) => {
+                log::info!("Test ========================== try retrieve clipboard image svg");
+                Some(ClipboardData::Image(arboard::ImageData::svg(
+                    std::str::from_utf8(&data).unwrap_or_default(),
+                )))
+            }
             Ok(ClipboardFormat::Special) => {
+                log::info!(
+                    "Test ========================== try retrieve clipboard special \"{}\"",
+                    &clipboard.special_name
+                );
                 Some(ClipboardData::Special((clipboard.special_name, data)))
             }
             _ => None,

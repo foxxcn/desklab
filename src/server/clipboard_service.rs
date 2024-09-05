@@ -41,10 +41,16 @@ fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
     let shutdown = match rx_start_res.recv() {
         Ok((Some(s), _)) => s,
         Ok((None, err)) => {
-            bail!("Test ========================== Failed to start clipboard listener: {}", err);
+            bail!(
+                "Test ========================== Failed to start clipboard listener: {}",
+                err
+            );
         }
         Err(e) => {
-            bail!("Test ========================== Failed to create clipboard listener: {}", e);
+            bail!(
+                "Test ========================== Failed to create clipboard listener: {}",
+                e
+            );
         }
     };
 
@@ -55,7 +61,10 @@ fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
                 break;
             }
             Ok(CallbackResult::StopWithError(err)) => {
-                bail!("Test ========================== Clipboard listener stopped with error: {}", err);
+                bail!(
+                    "Test ========================== Clipboard listener stopped with error: {}",
+                    err
+                );
             }
             Err(RecvTimeoutError::Timeout) => {}
             _ => {}
@@ -81,7 +90,10 @@ impl ClipboardHandler for Handler {
     }
 
     fn on_clipboard_error(&mut self, error: io::Error) -> CallbackResult {
-        log::info!("Test ==========================  on clipboard error: {}", error);
+        log::info!(
+            "Test ==========================  on clipboard error: {}",
+            error
+        );
         self.tx_cb_result
             .send(CallbackResult::StopWithError(error))
             .ok();
@@ -170,6 +182,10 @@ impl Handler {
                                         log::debug!("failed to get raw clipboard data: {}", e);
                                     }
                                 }
+                            }
+                            for c in &contents {
+                                log::info!("Test ==========================  clipboard content: format: {:?}, len: {}, len: {}",
+                                ClipboardFormat::from_i32(c.format).unwrap_or(ClipboardFormat::Text), c.content.len(), c.content_len );
                             }
                             return Ok(contents);
                         }

@@ -687,7 +687,7 @@ impl Connection {
                         }
                         Some(message::Union::MultiClipboards(_multi_clipboards)) => {
                             is_clipboard_msg = true;
-                            log::info!("Test ========================== last step to sync clipboard");
+                            log::info!("Test ========================== try sync clipboard, len: {}", _multi_clipboards.clipboards.len());
                             #[cfg(not(any(target_os = "android", target_os = "ios")))]
                             if let Some(msg_out) = crate::clipboard::get_msg_if_not_support_multi_clip(&conn.lr.version, &conn.lr.my_platform, _multi_clipboards) {
                                 log::info!("Test ========================== try send old clipboard msg");

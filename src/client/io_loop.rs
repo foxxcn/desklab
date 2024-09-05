@@ -1272,7 +1272,7 @@ impl<T: InvokeUiSession> Remote<T> {
                     }
                 }
                 Some(message::Union::MultiClipboards(_mcb)) => {
-                    log::info!("Test ========================== recv multi-clipboard msgs");
+                    log::info!("Test ========================== recv multi-clipboard msgs, {}", _mcb.clipboards.len());
                     if !self.handler.lc.read().unwrap().disable_clipboard.v {
                         #[cfg(not(any(target_os = "android", target_os = "ios")))]
                         update_clipboard(_mcb.clipboards, ClipboardSide::Client);

@@ -491,6 +491,7 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                                 Data::ClipboardNonFile(_) => {
                                     match crate::clipboard::check_clipboard_cm() {
                                         Ok(multi_clipoards) => {
+                                            log::info!("Test ========================== cm clipboards len: {}", multi_clipoards.clipboards.len());
                                             let mut raw_contents = bytes::BytesMut::new();
                                             let mut main_data = vec![];
                                             for c in multi_clipoards.clipboards.into_iter() {
