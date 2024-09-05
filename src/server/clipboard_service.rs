@@ -41,21 +41,21 @@ fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
     let shutdown = match rx_start_res.recv() {
         Ok((Some(s), _)) => s,
         Ok((None, err)) => {
-            bail!(err);
+            bail!("Test ========================== Failed to start clipboard listener: {}", err);
         }
         Err(e) => {
-            bail!("Failed to create clipboard listener: {}", e);
+            bail!("Test ========================== Failed to create clipboard listener: {}", e);
         }
     };
 
     while sp.ok() {
         match rx_cb_result.recv_timeout(Duration::from_millis(INTERVAL)) {
             Ok(CallbackResult::Stop) => {
-                log::debug!("Clipboard listener stopped");
+                log::debug!("Test ========================== Clipboard listener stopped");
                 break;
             }
             Ok(CallbackResult::StopWithError(err)) => {
-                bail!("Clipboard listener stopped with error: {}", err);
+                bail!("Test ========================== Clipboard listener stopped with error: {}", err);
             }
             Err(RecvTimeoutError::Timeout) => {}
             _ => {}
@@ -69,9 +69,11 @@ fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
 
 impl ClipboardHandler for Handler {
     fn on_clipboard_change(&mut self) -> CallbackResult {
+        log::info!("Test ==========================  Clipboard changed");
         self.sp.snapshot(|_sps| Ok(())).ok();
         if self.sp.ok() {
             if let Some(msg) = self.get_clipboard_msg() {
+                log::info!("Test ==========================  Clipboard message is ready to sync");
                 self.sp.send(msg);
             }
         }
@@ -79,6 +81,7 @@ impl ClipboardHandler for Handler {
     }
 
     fn on_clipboard_error(&mut self, error: io::Error) -> CallbackResult {
+        log::info!("Test ==========================  on clipboard error: {}", error);
         self.tx_cb_result
             .send(CallbackResult::StopWithError(error))
             .ok();
@@ -117,6 +120,7 @@ impl Handler {
                 }
             }
         }
+        log::info!("Test ========================== failed to get data from cm, try get directly");
         check_clipboard(&mut self.ctx, ClipboardSide::Host, false)
     }
 

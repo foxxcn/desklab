@@ -375,18 +375,18 @@ pub fn start_clipbard_master_thread(
             tx_start_res
                 .send((Some(master.shutdown_channel()), "".to_owned()))
                 .ok();
-            log::debug!("Clipboard listener started");
+            log::debug!("Test ========================== Clipboard listener started");
             if let Err(err) = master.run() {
-                log::error!("Failed to run clipboard listener: {}", err);
+                log::error!("Test ========================== Failed to run clipboard listener: {}", err);
             } else {
-                log::debug!("Clipboard listener stopped");
+                log::debug!("Test ========================== Clipboard listener stopped");
             }
         }
         Err(err) => {
             tx_start_res
                 .send((
                     None,
-                    format!("Failed to create clipboard listener: {}", err),
+                    format!("Test ========================== Failed to create clipboard listener: {}", err),
                 ))
                 .ok();
         }
