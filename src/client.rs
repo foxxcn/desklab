@@ -70,7 +70,7 @@ use crate::{
 };
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-use crate::clipboard::{check_clipboard, ClipboardSide, CLIPBOARD_INTERVAL};
+use crate::clipboard::{check_clipboard_msg, ClipboardSide, CLIPBOARD_INTERVAL};
 #[cfg(not(feature = "flutter"))]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::ui_session_interface::SessionPermissionConfig;
@@ -864,7 +864,9 @@ impl ClipboardHandler for ClientClipboardHandler {
         if TEXT_CLIPBOARD_STATE.lock().unwrap().running
             && TEXT_CLIPBOARD_STATE.lock().unwrap().is_required
         {
-            if let Some(msg) = check_clipboard(&mut self.ctx, ClipboardSide::Client, false) {
+            if let Some(msg) =
+                check_clipboard_msg(&mut self.ctx, ClipboardSide::Client, false, None)
+            {
                 self.send_msg(msg);
             }
         }

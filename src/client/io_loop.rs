@@ -1217,6 +1217,7 @@ impl<T: InvokeUiSession> Remote<T> {
                                 &peer_version,
                                 &peer_platform,
                                 crate::clipboard::ClipboardSide::Client,
+                                None,
                             ) {
                                 let sender = self.sender.clone();
                                 let permission_config = self.handler.get_permission_config();

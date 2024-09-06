@@ -17,7 +17,7 @@ const CLIPBOARD_FORMAT_EXCEL_XML_SPREADSHEET: &'static str = "XML Spreadsheet";
 
 lazy_static::lazy_static! {
     static ref ARBOARD_MTX: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
-    // cache the clipboard msg
+    // cache the clipboard msg, only used for the client, to sync the initial clipboard content.
     static ref LAST_MULTI_CLIPBOARDS: Arc<Mutex<MultiClipboards>> = Arc::new(Mutex::new(MultiClipboards::new()));
     // For updating in server and getting content in cm.
     // Clipboard on Linux is "server--clients" mode.
@@ -142,26 +142,57 @@ impl ClipboardContext {
     }
 }
 
-pub fn check_clipboard(
+pub fn check_clipboard_msg(
     ctx: &mut Option<ClipboardContext>,
     side: ClipboardSide,
     force: bool,
+    formats: Option<&[ClipboardFormat]>,
 ) -> Option<Message> {
-    if ctx.is_none() {
-        *ctx = ClipboardContext::new().ok();
-    }
-    let ctx2 = ctx.as_mut()?;
-    let content = ctx2.get(side, force);
-    if let Ok(content) = content {
-        if !content.is_empty() {
+    match check_clipboard_formats(ctx, side, force, formats) {
+        Ok(Some(clipboards)) => {
             let mut msg = Message::new();
-            let clipboards = proto::create_multi_clipboards(content);
-            msg.set_multi_clipboards(clipboards.clone());
-            *LAST_MULTI_CLIPBOARDS.lock().unwrap() = clipboards;
-            return Some(msg);
+            let multi_clipboards = MultiClipboards {
+                clipboards,
+                ..Default::default()
+            };
+            if side == ClipboardSide::Client {
+                *LAST_MULTI_CLIPBOARDS.lock().unwrap() = multi_clipboards.clone();
+            }
+            msg.set_multi_clipboards(multi_clipboards.clone());
+            Some(msg)
+        }
+        Ok(None) => None,
+        Err(e) => {
+            log::error!("Failed to get clipboard: {}", e);
+            None
         }
     }
-    None
+}
+
+pub fn check_clipboard_formats(
+    ctx: &mut Option<ClipboardContext>,
+    side: ClipboardSide,
+    force: bool,
+    formats: Option<&[ClipboardFormat]>,
+) -> ResultType<Option<Vec<Clipboard>>> {
+    if ctx.is_none() {
+        *ctx = Some(ClipboardContext::new()?);
+    }
+    let Some(ctx2) = ctx.as_mut() else {
+        // unreachable!
+        return Ok(None);
+    };
+    let content = ctx2.get(side, force, formats)?;
+    if !content.is_empty() {
+        return Ok(Some(
+            content
+                .into_iter()
+                .filter_map(proto::clipboard_data_to_proto)
+                .collect(),
+        ));
+    } else {
+        Ok(None)
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -178,7 +209,16 @@ pub fn check_clipboard_cm() -> ResultType<MultiClipboards> {
         }
     }
     if let Some(ctx) = ctx.as_mut() {
-        let content = ctx.get(ClipboardSide::Host, false)?;
+        let formats_without_text = [
+            ClipboardFormat::Html,
+            ClipboardFormat::Rtf,
+            ClipboardFormat::ImageRgba,
+            ClipboardFormat::ImagePng,
+            ClipboardFormat::ImageSvg,
+            ClipboardFormat::Special(CLIPBOARD_FORMAT_EXCEL_XML_SPREADSHEET),
+            ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT),
+        ];
+        let content = ctx.get(ClipboardSide::Host, false, Some(&formats_without_text))?;
         let clipboards = proto::create_multi_clipboards(content);
         Ok(clipboards)
     } else {
@@ -263,9 +303,16 @@ impl ClipboardContext {
         Ok(ClipboardContext { inner: board })
     }
 
-    pub fn get(&mut self, side: ClipboardSide, force: bool) -> ResultType<Vec<ClipboardData>> {
+    pub fn get(
+        &mut self,
+        side: ClipboardSide,
+        force: bool,
+        formats: Option<&[ClipboardFormat]>,
+    ) -> ResultType<Vec<ClipboardData>> {
         let _lock = ARBOARD_MTX.lock().unwrap();
-        let data = self.inner.get_formats(SUPPORTED_FORMATS)?;
+        let data = self
+            .inner
+            .get_formats(formats.unwrap_or(SUPPORTED_FORMATS))?;
         if data.is_empty() {
             return Ok(data);
         }
@@ -304,11 +351,12 @@ pub fn get_current_clipboard_msg(
     peer_version: &str,
     peer_platform: &str,
     side: ClipboardSide,
+    formats: Option<&[ClipboardFormat]>,
 ) -> Option<Message> {
     let mut multi_clipboards = LAST_MULTI_CLIPBOARDS.lock().unwrap();
     if multi_clipboards.clipboards.is_empty() {
         let mut ctx = ClipboardContext::new().ok()?;
-        *multi_clipboards = proto::create_multi_clipboards(ctx.get(side, true).ok()?);
+        *multi_clipboards = proto::create_multi_clipboards(ctx.get(side, true, formats).ok()?);
     }
     if multi_clipboards.clipboards.is_empty() {
         return None;
@@ -478,7 +526,7 @@ mod proto {
         }
     }
 
-    fn clipboard_data_to_proto(data: ClipboardData) -> Option<Clipboard> {
+    pub fn clipboard_data_to_proto(data: ClipboardData) -> Option<Clipboard> {
         let d = match data {
             ClipboardData::Text(s) => plain_to_proto(s, ClipboardFormat::Text),
             ClipboardData::Rtf(s) => plain_to_proto(s, ClipboardFormat::Rtf),

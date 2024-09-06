@@ -1,7 +1,7 @@
 use super::*;
 pub use crate::clipboard::{
-    check_clipboard, ClipboardContext, ClipboardSide, CLIPBOARD_INTERVAL as INTERVAL,
-    CLIPBOARD_NAME as NAME,
+    check_clipboard_formats, check_clipboard_msg, ClipboardContext, ClipboardSide,
+    CLIPBOARD_INTERVAL as INTERVAL, CLIPBOARD_NAME as NAME,
 };
 #[cfg(windows)]
 use crate::ipc::{self, ClipboardFile, ClipboardNonFile, Data};
@@ -87,42 +87,66 @@ impl ClipboardHandler for Handler {
 }
 
 impl Handler {
+    #[cfg(target_os = "windows")]
     fn get_clipboard_msg(&mut self) -> Option<Message> {
-        #[cfg(target_os = "windows")]
+        let mut clipboards = Vec::new();
+        // Read only text data in server process, maybe we need an option to control this.
+        // Do not read the other formats for security reasons.
+        // In server process, `png` format can be read on my Win11, while not on my Win10.
+        match check_clipboard_formats(
+            &mut self.ctx,
+            ClipboardSide::Host,
+            false,
+            Some(&[arboard::ClipboardFormat::Text]),
+        ) {
+            Ok(Some(text_data)) => {
+                clipboards.extend(text_data);
+            }
+            Err(e) => {
+                log::error!("Failed to read clipboard from host: {}", e);
+            }
+            _ => {}
+        }
         if crate::common::is_server() && crate::platform::is_root() {
             match self.read_clipboard_from_cm_ipc() {
                 Err(e) => {
                     log::error!("Failed to read clipboard from cm: {}", e);
                 }
                 Ok(data) => {
-                    // Skip sending empty clipboard data.
-                    // Maybe there's something wrong reading the clipboard data in cm, but no error msg is returned.
-                    // The clipboard data should not be empty, the last line will try again to get the clipboard data.
-                    if !data.is_empty() {
-                        let mut msg = Message::new();
-                        let multi_clipboards = MultiClipboards {
-                            clipboards: data
-                                .into_iter()
-                                .map(|c| Clipboard {
-                                    compress: c.compress,
-                                    content: c.content,
-                                    width: c.width,
-                                    height: c.height,
-                                    format: ClipboardFormat::from_i32(c.format)
-                                        .unwrap_or(ClipboardFormat::Text)
-                                        .into(),
-                                    ..Default::default()
-                                })
-                                .collect(),
+                    clipboards.extend(data.into_iter().map(|c| {
+                        Clipboard {
+                            compress: c.compress,
+                            content: c.content,
+                            width: c.width,
+                            height: c.height,
+                            format: ClipboardFormat::from_i32(c.format)
+                                .unwrap_or(ClipboardFormat::Text)
+                                .into(),
                             ..Default::default()
-                        };
-                        msg.set_multi_clipboards(multi_clipboards);
-                        return Some(msg);
-                    }
+                        }
+                    }));
                 }
             }
         }
-        check_clipboard(&mut self.ctx, ClipboardSide::Host, false)
+        // Skip sending empty clipboard data.
+        // Maybe there's something wrong reading the clipboard data in cm, but no error msg is returned.
+        // The clipboard data should not be empty, the last line will try again to get the clipboard data.
+        if !clipboards.is_empty() {
+            let mut msg = Message::new();
+            let multi_clipboards = MultiClipboards {
+                clipboards,
+                ..Default::default()
+            };
+            msg.set_multi_clipboards(multi_clipboards);
+            return Some(msg);
+        } else {
+            None
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn get_clipboard_msg(&mut self) -> Option<Message> {
+        check_clipboard_msg(&mut self.ctx, ClipboardSide::Host, false, None)
     }
 
     // It's ok to do async operation in the clipboard service because:
